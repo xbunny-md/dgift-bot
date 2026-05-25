@@ -1,0 +1,282 @@
+BUNNY MD / DGIFT BOT COMPREHENSIVE SOFTWARE LICENSE AGREEMENT
+Version 2.0, Effective Date: January 1, 2026
+
+Copyright (c) 2025-2026 Bunny Tech
+Ultimate Owner and Original Creator: Lupin Starnley
+Contact: +255780470905
+Current Maintainer: obashjalash-droid
+
+PREAMBLE:
+This License Agreement governs the use, reproduction, modification, distribution, and
+fork rights of the software known as "Bunny MD" and its derivative builds including but
+not limited to "dgift-bot". By accessing, cloning, forking, downloading, installing,
+executing, or otherwise using this Software, You acknowledge that You have read,
+understood, and agree to be bound by all terms and conditions set forth in this License.
+
+WHEREAS, Lupin Starnley, operating under the trade name Bunny Tech, is the original
+creator, ultimate copyright holder, and intellectual property owner of the Bunny MD
+source code and all associated technology, frameworks, architectures, and methodologies
+contained therein;
+
+WHEREAS, obashjalash-droid is the current authorized maintainer and distributor of
+derivative builds including dgift-bot, operating under license from the Ultimate Owner;
+
+WHEREAS, the Software represents substantial investment of time, skill, and resources
+by Bunny Tech and its contributors;
+
+NOW THEREFORE, this License establishes the terms under which the Software may be used.
+
+ARTICLE 1: DEFINITIONS
+
+1.1 "Software" means the complete Bunny MD source code, including all files, modules,
+scripts, commands, observers, libraries, configuration files, database schemas, SQL
+scripts, documentation, pairing interfaces, web assets, and any other materials distributed
+within the official Bunny MD or dgift-bot repositories, whether in source code form,
+object code form, or executable form.
+
+1.2 "Ultimate Owner" means Lupin Starnley, sole proprietor of Bunny Tech, who retains
+all original copyrights, moral rights, patent rights, and intellectual property rights
+in and to the Software and all Derivative Works thereof.
+
+1.3 "Bunny Tech" means the trade name and technology organization founded and operated
+by Lupin Starnley, under which all Bunny MD technology is developed and released.
+
+1.4 "Current Maintainer" means obashjalash-droid or any other individual or entity
+explicitly authorized in writing by the Ultimate Owner to maintain, distribute, or
+create Derivative Works of the Software.
+
+1.5 "Licensee" or "You" or "Your" means any individual, corporation, partnership,
+limited liability company, or other legal entity that accesses, uses, modifies, or
+distributes the Software.
+
+1.6 "Derivative Work" means any work based upon or derived from the Software, including
+but not limited to translations, adaptations, modifications, enhancements, extensions,
+porting to other platforms, incorporation into other software, or any work containing
+portions of the Software, whether verbatim or with modifications.
+
+1.7 "Fork" means a copy of the Software repository created on GitHub or any other
+version control platform, whether public or private, for the purpose of independent
+development.
+
+1.8 "Commercial Use" means any use of the Software that is intended for or directed
+toward commercial advantage or monetary compensation, including but not limited to
+selling the Software, offering paid WhatsApp bot services, integrating the Software
+into commercial products, or using the Software to operate a business.
+
+1.9 "Source Code" means the human-readable form of the Software, including all comments,
+documentation, and build scripts.
+
+ARTICLE 2: OWNERSHIP AND COPYRIGHT
+
+2.1 ULTIMATE OWNERSHIP: Lupin Starnley, under Bunny Tech, is and shall remain the
+Ultimate Owner of all copyright, intellectual property rights, title, and interest in
+and to the Software, including all past, present, and future versions, and all Derivative
+Works created by any party. All rights not expressly granted herein are reserved by the
+Ultimate Owner.
+
+2.2 ACKNOWLEDGMENT OF DERIVATIVE STATUS: All Derivative Works, including dgift-bot and
+any other forks, modifications, or adaptations, shall remain subject to the Ultimate
+Owner's copyright and this License. The creation of a Derivative Work does not grant
+the creator any ownership rights in the original Software or underlying Bunny MD technology.
+
+2.3 ATTRIBUTION REQUIREMENT: All copies, forks, distributions, and Derivative Works must
+prominently display the following attribution in all user-facing interfaces, documentation,
+README files, and source code headers:
+
+"Based on Bunny MD by Lupin Starnley / Bunny Tech
+Original Source: Bunny MD
+Ultimate Owner Contact: +255780470905"
+
+Failure to maintain proper attribution constitutes a material breach of this License.
+
+ARTICLE 3: GRANT OF LICENSE TO USE AND FORK
+
+3.1 CONDITIONAL LICENSE GRANT: Subject to Your compliance with all terms of this License,
+the Ultimate Owner hereby grants You a limited, worldwide, non-exclusive, non-transferable,
+non-sublicensable, revocable license to:
+
+(a) Use the Software for personal, educational, and non-commercial purposes;
+(b) Fork the Software repository on GitHub or other platforms;
+(c) Modify the Software to create Derivative Works;
+(d) Distribute the Software and Derivative Works, subject to Article 4;
+(e) Study the Source Code and learn from its implementation.
+
+3.2 FORK PERMISSION: You are explicitly permitted to fork this repository, provided that:
+(a) The fork maintains all copyright notices and license files unmodified;
+(b) The fork README clearly states "Forked from Bunny MD by Lupin Starnley";
+(c) The fork does not remove or obscure the "Powered by Bunny Tech" or "Powered by Dgift Bot"
+attributions from any user interface;
+(d) The fork includes a link back to the original Bunny MD repository;
+(e) The fork complies with all restrictions in Article 4.
+
+3.3 NO TRANSFER OF OWNERSHIP: This License grants You no ownership rights in the Software.
+Forking or modifying the Software does not transfer any intellectual property rights to You.
+
+ARTICLE 4: RESTRICTIONS AND PROHIBITIONS
+
+4.1 COMMERCIAL RESTRICTION: You may NOT use the Software or any Derivative Work for
+Commercial Use without obtaining prior written commercial license from the Ultimate Owner.
+Prohibited commercial activities include but are not limited to:
+(a) Selling access to the Software or any bot instance running the Software;
+(b) Offering WhatsApp bot hosting services using the Software for a fee;
+(c) Incorporating the Software into a commercial product or SaaS offering;
+(d) Using the Software to generate revenue through advertising, subscriptions, or donations;
+(e) Removing attribution and claiming the Software as Your original creation for commercial gain.
+
+4.2 ATTRIBUTION REMOVAL PROHIBITED: You may NOT remove, alter, obscure, or modify any
+copyright notices, license texts, attribution statements, "Powered by" messages, or
+credits identifying Lupin Starnley, Bunny Tech, Bunny MD, or obashjalash-droid. All
+confirmation messages, help commands, and about pages must retain proper attribution.
+
+4.3 MALICIOUS USE PROHIBITED: You may NOT use the Software for any unlawful, harmful,
+fraudulent, or malicious purpose, including but not limited to:
+(a) Sending spam, unsolicited bulk messages, or phishing attempts;
+(b) Harassment, stalking, or threatening behavior;
+(c) Distributing malware, viruses, or illegal content;
+(d) Violating WhatsApp Terms of Service in a manner causing harm to third parties;
+(e) Impersonating individuals or organizations without authorization;
+(f) Any activity that violates applicable local, national, or international law.
+
+4.4 TRADEMARK RESTRICTION: You may NOT use the names "Bunny MD", "Bunny Tech",
+"Lupin Starnley", or "Dgift Bot" in any way that suggests endorsement, sponsorship,
+or affiliation without express written permission, except for nominative fair use in
+attribution as required by this License.
+
+4.5 PATENT NON-ASSERTION: You may NOT initiate patent litigation against the Ultimate
+Owner, Current Maintainer, or any user of the Software based on the Software itself.
+
+4.6 SUBLICENSING PROHIBITED: You may NOT sublicense, lease, rent, or transfer Your
+rights under this License to any third party without written consent from the Ultimate Owner.
+
+ARTICLE 5: REQUIREMENTS FOR DISTRIBUTION AND DERIVATIVE WORKS
+
+5.1 LICENSE INCLUSION: Any distribution of the Software or Derivative Works, whether in
+Source Code or executable form, must include a complete copy of this License file.
+
+5.2 SOURCE CODE AVAILABILITY: If You distribute a Derivative Work in executable form,
+You must either: (a) Include the complete corresponding Source Code; or (b) Provide a
+written offer to provide the Source Code upon request for a period of at least three years.
+
+5.3 MODIFICATION NOTICES: You must clearly mark all modified files with prominent notices
+stating that You changed the files, the date of modification, and Your identity. Example:
+// Modified by [Your Name] on [Date] - Based on Bunny MD by Lupin Starnley
+
+5.4 CHANGELOG REQUIREMENT: Derivative Works must maintain a CHANGELOG.md file documenting
+all modifications from the original Bunny MD codebase.
+
+5.5 COMPATIBILITY: Derivative Works must maintain compatibility with the core Baileys
+library architecture and must not introduce breaking changes that prevent upstream
+merging without clear documentation.
+
+ARTICLE 6: WHATSAPP AND THIRD-PARTY SERVICES
+
+6.1 NO AFFILIATION: The Software is not affiliated with, endorsed by, sponsored by, or
+approved by WhatsApp Inc., Meta Platforms Inc., or any of their subsidiaries. WhatsApp
+is a trademark of WhatsApp Inc.
+
+6.2 TERMS OF SERVICE COMPLIANCE: Your use of the Software with WhatsApp is subject to
+WhatsApp's Terms of Service. You are solely responsible for ensuring Your use complies
+with all applicable terms. The Ultimate Owner and Current Maintainer are not responsible
+for account bans, restrictions, or legal consequences resulting from Your use.
+
+6.3 THIRD-PARTY DEPENDENCIES: The Software relies on third-party services including
+Supabase, Baileys, Node.js, and others. You are responsible for complying with all
+third-party terms of service and licenses.
+
+ARTICLE 7: DISCLAIMER OF WARRANTY
+
+7.1 AS-IS BASIS: THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY
+OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, RELIABILITY, OR
+AVAILABILITY. THE ENTIRE RISK AS TO THE QUALITY, PERFORMANCE, AND USE OF THE SOFTWARE
+IS WITH YOU.
+
+7.2 NO WARRANTY OF FUNCTIONALITY: The Ultimate Owner does not warrant that the Software
+will meet Your requirements, operate uninterrupted, be error-free, or that defects will
+be corrected. WhatsApp frequently updates its protocols, and the Software may cease
+functioning without notice.
+
+7.3 SECURITY DISCLAIMER: The Ultimate Owner makes no representations regarding the
+security of the Software. You are responsible for securing Your deployment, protecting
+API keys, and safeguarding user data.
+
+ARTICLE 8: LIMITATION OF LIABILITY
+
+8.1 NO LIABILITY FOR DAMAGES: TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL
+LUPIN STARNLEY, BUNNY TECH, OBASHJALASH-DROID, OR ANY CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES,
+INCLUDING BUT NOT LIMITED TO: LOSS OF PROFITS, LOSS OF DATA, LOSS OF GOODWILL, BUSINESS
+INTERRUPTION, COMPUTER FAILURE, ACCOUNT TERMINATION, OR ANY OTHER COMMERCIAL DAMAGES
+OR LOSSES, ARISING OUT OF OR RELATED TO THE USE OR INABILITY TO USE THE SOFTWARE,
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY.
+
+8.2 MAXIMUM LIABILITY: If, notwithstanding the foregoing, the Ultimate Owner is found
+liable, the total cumulative liability shall not exceed the amount You paid for the
+Software license, or if no fee was paid, then One United States Dollar ($1.00 USD).
+
+8.3 INDEMNIFICATION: You agree to indemnify, defend, and hold harmless Lupin Starnley,
+Bunny Tech, obashjalash-droid, and all contributors from and against any and all claims,
+liabilities, damages, losses, costs, expenses, and fees (including reasonable attorneys'
+fees) arising from: (a) Your use or misuse of the Software; (b) Your violation of this
+License; (c) Your violation of any third-party rights; or (d) Your violation of applicable law.
+
+ARTICLE 9: TERMINATION
+
+9.1 TERMINATION BY BREACH: This License terminates automatically if You fail to comply
+with any term herein. Upon termination, You must immediately cease all use, destroy all
+copies of the Software, and delete all Derivative Works in Your possession.
+
+9.2 TERMINATION BY ULTIMATE OWNER: The Ultimate Owner reserves the right to terminate
+this License for any reason upon thirty (30) days written notice.
+
+9.3 SURVIVAL: Articles 2, 4, 7, 8, 9, and 10 shall survive termination of this License.
+
+ARTICLE 10: GENERAL PROVISIONS
+
+10.1 GOVERNING LAW: This License shall be governed by and construed in accordance with
+the laws of Tanzania, without regard to conflict of law principles. Any disputes shall
+be resolved in the courts of Dar es Salaam, Tanzania.
+
+10.2 SEVERABILITY: If any provision of this License is held invalid or unenforceable,
+the remaining provisions shall remain in full force and effect.
+
+10.3 NO WAIVER: The failure of the Ultimate Owner to enforce any provision shall not
+constitute a waiver of future enforcement of that or any other provision.
+
+10.4 ENTIRE AGREEMENT: This License constitutes the entire agreement between the parties
+and supersedes all prior agreements regarding the Software.
+
+10.5 AMENDMENTS: The Ultimate Owner reserves the right to modify this License. Continued
+use after modification constitutes acceptance of the new terms.
+
+10.6 CONTACT: For commercial licensing inquiries, permissions, or questions regarding
+this License, contact:
+
+Lupin Starnley
+Bunny Tech
+WhatsApp: +255780470905
+Repository: Bunny MD
+
+ARTICLE 11: SPECIAL PROVISIONS FOR DGIFT BOT
+
+11.1 CURRENT MAINTAINER RIGHTS: obashjalash-droid is granted limited rights to maintain,
+distribute, and create Derivative Works under the name "dgift-bot" subject to all terms
+herein and continued acknowledgment of the Ultimate Owner.
+
+11.2 BRANDING REQUIREMENTS: All builds of dgift-bot must include "Based on Bunny MD by
+Lupin Starnley" in the README, about command, and startup console log. The "Powered by
+Dgift Bot" attribution may coexist but may not replace Bunny Tech attribution.
+
+11.3 REVOCATION: The Ultimate Owner may revoke the Current Maintainer's rights at any
+time for violation of this License or for any other reason.
+
+ACKNOWLEDGMENT:
+BY FORKING, CLONING, DOWNLOADING, INSTALLING, OR USING THE SOFTWARE, YOU ACKNOWLEDGE
+THAT YOU HAVE READ THIS LICENSE, UNDERSTAND ALL TERMS AND CONDITIONS, AND AGREE TO BE
+LEGALLY BOUND BY THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT USE THE SOFTWARE.
+
+Powered by Bunny Tech
+Original Source Code: Bunny MD by Lupin Starnley
+Contact: +255780470905
+
+END OF LICENSE AGREEMENT
