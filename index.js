@@ -9,54 +9,160 @@ import fs from 'fs'
 import AdmZip from 'adm-zip'
 import pkg from '@whiskeysockets/baileys'
 const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers } = pkg
+import { createClient } from '@supabase/supabase-js'
+import ws from 'ws'
 import 'dotenv/config'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// --- DYNAMIC AUTO-FIX LOGIC FOR CASE-SENSITIVITY & CACHE FILES ---
-const LIB_DIR = join(__dirname, 'lib')
+// ==========================================
+// 🛠️ MULTI-FOLDER SELF-HEALING & CORRECTION LOGIC
+// ==========================================
+function fixDirectoryCaseSensitivity(dirPath) {
+  if (!fs.existsSync(dirPath)) return
+  try {
+    const items = fs.readdirSync(dirPath)
+    items.forEach(item => {
+      const fullPath = join(dirPath, item)
+      const lowerItem = item.toLowerCase()
+      
+      // Handle cache.js / chache.js diagnostic reporting
+      if (lowerItem === 'chache.js') {
+        console.log(`⚠️ INFO: Found non-standard spelling '${item}' in directory: ${dirPath}`)
+      } else if (lowerItem === 'cache.js') {
+        console.log(`ℹ️ INFO: Standard 'cache.js' file verified in directory: ${dirPath}`)
+      }
 
-if (fs.existsSync(LIB_DIR)) {
-  const files = fs.readdirSync(LIB_DIR)
-  
-  // 1. Kagua na utoe taarifa kuhusu chache.js/cache.js
-  const chacheFile = files.find(f => f.toLowerCase() === 'chache.js')
-  const cacheFile = files.find(f => f.toLowerCase() === 'cache.js')
-  if (chacheFile) {
-    console.log(`⚠️ INFO: Picha ilionesha '${chacheFile}' ipo kwenye lib/ folder.`)
-  } else if (cacheFile) {
-    console.log(`ℹ️ INFO: Faili linalofaa la '${cacheFile}' lipo tayari.`)
+      // Enforce clean lower-case execution naming anomalies for core router operations
+      if (lowerItem === 'router.js' && item !== 'router.js') {
+        const correctPath = join(dirPath, 'router.js')
+        fs.renameSync(fullPath, correctPath)
+        console.log(`🔧 FIXED CASE: Corrected router casing reference: ${item} -> router.js`)
+      }
+    })
+  } catch (err) {
+    console.log(`⚠️ Diagnostics bypass for directory ${dirPath}: ${err.message}`)
   }
+}
 
-  // 2. Tafuta supabase.js kwa mchanganyiko wowote wa herufi (Mixed-case)
-  const foundSupabase = files.find(f => f.toLowerCase() === 'supabase.js')
-  if (foundSupabase && foundSupabase !== 'supabase.js') {
-    console.log(`🔧 FIXING: Imegundulika '${foundSupabase}'. Inarekebishwa kuwa 'supabase.js' kwa ajili ya Linux/Render...`)
-    try {
-      fs.renameSync(join(LIB_DIR, foundSupabase), join(LIB_DIR, 'supabase.js'))
-      console.log(`✅ SUCCESS: Jina limerekebishwa kikamilifu!`)
-    } catch (err) {
-      console.error(`❌ FAILED: Imeshindwa kubadili jina la faili:`, err.message)
+// Target diagnostic passes across execution targets
+fixDirectoryCaseSensitivity(join(__dirname, 'lib'))
+fixDirectoryCaseSensitivity(__dirname)
+
+// ==========================================
+// ☁️ INTERNAL INTEGRATED SUPABASE DB LOGIC
+// ==========================================
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  console.log('⚠️ SUPABASE_URL or SUPABASE_KEY is missing in environment variables')
+  process.exit(1)
+}
+
+// Integrated client instance leveraging absolute Node 20 WS support
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  realtime: {
+    transport: ws
+  }
+})
+
+export async function getBotSettings() {
+  try {
+    const { data, error } = await supabase
+      .from('b_settings')
+      .select('*')
+      .eq('id', 'DGIFT_DEFAULT')
+      .single()
+
+    if (error) {
+      console.log('⚠️ Failed to load b_settings from database:', error.message)
+      return {
+        botname: 'dgift-bot',
+        owner_number: '254748548334',
+        owner_name: 'obashjalash-droid',
+        prefix: '.',
+        public_mode: false,
+        antilink: false,
+        antispam: false,
+        autoread: false,
+        autotyping: false,
+        autoviewstatus: false
+      }
+    }
+    return data
+  } catch (err) {
+    console.log('⚠️ Database retrieval error fallback triggered:', err.message)
+    return {
+      botname: 'dgift-bot',
+      owner_number: '254748548334',
+      owner_name: 'obashjalash-droid',
+      prefix: '.',
+      public_mode: false,
+      antilink: false,
+      antispam: false,
+      autoread: false,
+      autotyping: false,
+      autoviewstatus: false
     }
   }
 }
 
-// Dynamic Imports ili kuzuia ESM isife kabla ya kurekebisha majina ya faili
-let getBotSettings, listenSettingsUpdates, supabase;
-let initializeRouter, handleMessages;
+export function listenSettingsUpdates(callback) {
+  supabase
+    .channel('b_settings_changes')
+    .on('postgres_changes', 
+      { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'b_settings', 
+        filter: 'id=eq.DGIFT_DEFAULT' 
+      }, 
+      (payload) => {
+        console.log('🔥 Settings updated live:', payload.new)
+        callback(payload.new)
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Realtime settings listener active - Powered by Dgift Bot')
+      }
+    })
+}
 
-// 1. GLOBAL STATE
+// ==========================================
+// 🚀 ROUTER INTERACTION RESOLUTION (DYNAMIC PATH LOADING)
+// ==========================================
+let initializeRouter, handleMessages;
+try {
+  const routerModule = await import('./lib/router.js')
+  initializeRouter = routerModule.initializeRouter
+  handleMessages = routerModule.handleMessages
+} catch (err) {
+  console.log('🚨 Critical ESM Import Failure on router routing layers:', err.message)
+  process.exit(1)
+}
+
+// ==========================================
+// 1. GLOBAL STATE DEFINITIONS
+// ==========================================
 let botSettings = null
 let sock = null
 let qrString = ''
 let isConnected = false
 let reconnectAttempts = 0
-let lastCredsSync = 0 // Throttle Supabase writes
+let lastCredsSync = 0 
 const MAX_RECONNECTS = 10
 const SESSION_DIR = './session'
 
-// 2. EXPRESS + SOCKET.IO
+// ==========================================
+// 2. EXPRESS APPLICATION + SOCKET.IO ENGINE
+// ==========================================
 const app = express()
 const server = createServer(app)
 const io = new Server(server, { cors: { origin: "*" } })
@@ -65,7 +171,6 @@ const PORT = process.env.PORT || 3000
 app.use(express.static(join(__dirname, 'public')))
 app.use(express.json())
 
-// Health endpoint kwa UptimeRobot - HAIJIPIGI PING
 app.get('/', (req, res) => {
   res.json({
     status: 'alive',
@@ -76,17 +181,17 @@ app.get('/', (req, res) => {
   })
 })
 
-// 3. SUPABASE SYNC - ZIP FOLDER YOTE, TUMIA bu_sessions
+// ==========================================
+// 3. STORAGE PERSISTENCE LAYERS (SESSION ENCRYPTION/ZIP)
+// ==========================================
 async function syncSessionToCloud(force = false) {
   try {
-    // Throttle: Max mara 1 kila dakika 2, au force ukiconnect
     const now = Date.now()
     if (!force && now - lastCredsSync < 120000) return
     lastCredsSync = now
 
     if (!fs.existsSync(SESSION_DIR)) return
 
-    // ZIP FOLDER YOTE YA SESSION
     const zip = new AdmZip()
     zip.addLocalFolder(SESSION_DIR)
     const zipBuffer = zip.toBuffer()
@@ -97,9 +202,9 @@ async function syncSessionToCloud(force = false) {
       data: base64,
       updated_at: new Date().toISOString()
     })
-    console.log('☁️ Full session + keys synced to Supabase')
+    console.log('☁️ Full session + cryptographic verification keys synced to Supabase')
   } catch (e) {
-    console.log('Session sync error:', e.message)
+    console.log('Session sync error execution caught:', e.message)
   }
 }
 
@@ -112,36 +217,36 @@ async function loadSessionFromCloud() {
       .single()
 
     if (data?.data) {
-      // FUTA YA ZAMANI KWANZA
       if (fs.existsSync(SESSION_DIR)) {
         fs.rmSync(SESSION_DIR, { recursive: true, force: true })
       }
       fs.mkdirSync(SESSION_DIR, { recursive: true })
 
-      // UNZIP KUTOKA SUPABASE
       const zipBuffer = Buffer.from(data.data, 'base64')
       const zip = new AdmZip(zipBuffer)
       zip.extractAllTo(SESSION_DIR, true)
 
-      console.log('☁️ Full session + keys restored from Supabase')
+      console.log('☁️ Full session + operational credentials restored from Supabase')
       return true
     }
   } catch (e) {
-    console.log('No session in Supabase')
+    console.log('No existing active operational session localized in Cloud instance')
   }
   return false
 }
 
-// 4. WHATSAPP CONNECTION - ANTI-SYNC, ANTI-BAD-MAC
+// ==========================================
+// 4. WHATSAPP CORE NETWORK CONNECTION HANDLER
+// ==========================================
 async function connectToWhatsApp() {
   try {
     await loadSessionFromCloud()
     const { state, saveCreds } = await useMultiFileAuthState('./session')
     const { version, isLatest } = await fetchLatestBaileysVersion()
-    console.log(`Using WA v${version.join('.')}, isLatest: ${isLatest}`)
+    console.log(`Using Baileys Framework WA v${version.join('.')}, latest status: ${isLatest}`)
 
     const hasSession = state.creds?.noiseKey ? true : false
-    console.log(hasSession ? '🔄 Restoring session...' : '🔍 New session. QR will generate')
+    console.log(hasSession ? '🔄 Reconstituting existing state session profiles...' : '🔍 New session authorization pipeline initializing...')
 
     sock = makeWASocket({
       version,
@@ -152,13 +257,11 @@ async function connectToWhatsApp() {
         keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
       },
       browser: Browsers.ubuntu('DGIFT BOT'),
-      // HIZI NDIO ZINAZUIA "SYNCING" NA "BAD MAC"
       syncFullHistory: false,
       markOnlineOnConnect: false,
       shouldIgnoreJid: jid => jid === 'status@broadcast' || jid.endsWith('@newsletter'),
-      fireInitQueries: false, // Inapunguza requests
-      generateHighQualityLinkPreview: false, // Inapunguza RAM
-      // Stable
+      fireInitQueries: false, 
+      generateHighQualityLinkPreview: false, 
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 0,
       keepAliveIntervalMs: 20000,
@@ -168,7 +271,9 @@ async function connectToWhatsApp() {
       getMessage: async () => ({ conversation: '' })
     })
 
-    // 5. CONNECTION UPDATES
+    // ==========================================
+    // 5. SOCKET CONNECTIVITY STATE TRANSITIONS
+    // ==========================================
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
 
@@ -178,9 +283,9 @@ async function connectToWhatsApp() {
           const qrImage = await qrcode.toDataURL(qr)
           io.emit('qr', qrImage)
           io.emit('status', 'Scan QR or use Pair Code')
-          console.log('📱 QR ready at /pair.html')
+          console.log('📱 QR Authentication string dispatched securely to /pair.html endpoint')
         } catch (err) {
-          console.log('QR generation failed:', err.message)
+          console.log('QR matrix translation process aborted:', err.message)
         }
       }
 
@@ -189,13 +294,12 @@ async function connectToWhatsApp() {
         qrString = ''
         reconnectAttempts = 0
         io.emit('status', 'Connected')
-        console.log('✅ WhatsApp connected successfully!')
+        console.log('✅ Realtime communication matrix with WhatsApp successfully stabilized!')
 
-        // Pakua settings fresh kila ukiconnect
         botSettings = await getBotSettings()
-        console.log('🔄 Fresh settings loaded. Prefix:', botSettings.prefix)
+        console.log('🔄 Fresh system configs fetched successfully. Core Prefix:', botSettings.prefix)
 
-        await syncSessionToCloud(true) // FORCE SAVE MARA YA KWANZA
+        await syncSessionToCloud(true) 
         await sendConfirmationMessage()
       }
 
@@ -203,10 +307,10 @@ async function connectToWhatsApp() {
         const statusCode = lastDisconnect?.error?.output?.statusCode
         isConnected = false
         io.emit('status', 'Disconnected')
-        console.log('Connection closed. Reason:', lastDisconnect?.error?.message)
+        console.log('Network interface connection severed. Reason parameters:', lastDisconnect?.error?.message)
 
         if (statusCode === DisconnectReason.loggedOut) {
-          console.log('❌ Logged out. Clearing session...')
+          console.log('❌ Absolute termination signature received. Purging local session matrices...')
           await supabase.from('bu_sessions').delete().eq('id', 'full_session')
           if (fs.existsSync('./session')) fs.rmSync('./session', { recursive: true, force: true })
           qrString = ''
@@ -215,29 +319,29 @@ async function connectToWhatsApp() {
         } else if (reconnectAttempts < MAX_RECONNECTS) {
           reconnectAttempts++
           const delay = Math.min(reconnectAttempts * 10000, 60000)
-          console.log(`🔄 Reconnecting in ${delay/1000}s... Attempt ${reconnectAttempts}/${MAX_RECONNECTS}`)
+          console.log(`🔄 Pipeline scheduling reconnection in ${delay/1000}s... Routine checklist entry ${reconnectAttempts}/${MAX_RECONNECTS}`)
           setTimeout(() => connectToWhatsApp(), delay)
         } else {
-          console.log('⚠️ Max reconnects reached. Waiting 5 minutes...')
+          console.log('⚠️ Maximum reconnection thresholds breached. Dormant buffer period active for 5 minutes...')
           reconnectAttempts = 0
           setTimeout(() => connectToWhatsApp(), 300000)
         }
       }
     })
 
-    // 6. SAVE CREDS - THROTTLED
+    // 6. CREDENTIAL STORAGE SYNCHRONIZATION
     sock.ev.on('creds.update', async () => {
       await saveCreds()
-      syncSessionToCloud(false) // Ina throttle ndani
+      syncSessionToCloud(false) 
     })
 
-    // 7. HANDLE MESSAGES
+    // 7. INBOUND MESSAGE PROCESSING PIPE
     sock.ev.on('messages.upsert', (m) => {
       handleMessages(sock, m, botSettings)
     })
 
   } catch (err) {
-    console.error('Connection error:', err.message)
+    console.error('Fatal network initialization loop crash:', err.message)
     if (reconnectAttempts < MAX_RECONNECTS) {
       reconnectAttempts++
       setTimeout(() => connectToWhatsApp(), 15000)
@@ -245,7 +349,9 @@ async function connectToWhatsApp() {
   }
 }
 
-// 8. SOCKET.IO
+// ==========================================
+// 8. INTERACTIVE SOCKET.IO SUBSCRIPTIONS
+// ==========================================
 io.on('connection', (socket) => {
   if (qrString && !isConnected) {
     qrcode.toDataURL(qrString).then(qrImage => {
@@ -259,15 +365,17 @@ io.on('connection', (socket) => {
     try {
       const code = await sock.requestPairingCode(phoneNumber)
       socket.emit('pair_code', code)
-      console.log('Pair code sent:', code)
+      console.log('Authentication Pairing Token pushed:', code)
     } catch (err) {
       socket.emit('pair_error', 'Failed to generate code. Try QR.')
-      console.log('Pair code error:', err.message)
+      console.log('Pairing sequence handshake error:', err.message)
     }
   })
 })
 
-// 9. CONFIRMATION - PUSHNAME FIXED
+// ==========================================
+// 9. TELEMETRY STATUS REPORT SEND OUT
+// ==========================================
 async function sendConfirmationMessage() {
   const s = botSettings
   const imageUrl = 'https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png'
@@ -299,54 +407,47 @@ async function sendConfirmationMessage() {
       image: { url: imageUrl },
       caption: caption
     })
-    console.log('Confirmation sent to owner')
+    console.log('Diagnostic telemetric report delivered cleanly to terminal operator')
   } catch (err) {
-    console.log('Failed to send confirmation:', err.message)
+    console.log('Failed to dispatch telemetric startup manifest report:', err.message)
   }
 }
 
-// 10. MAIN START
+// ==========================================
+// 10. SYSTEM TELEMETRY EXECUTION ROOT ENTRY
+// ==========================================
 async function startBot() {
   try {
-    // Kufanya dynamic imports baada ya mifumo ya majina ya faili kusawazishwa juu
-    const supabaseModule = await import('./lib/supabase.js')
-    getBotSettings = supabaseModule.getBotSettings
-    listenSettingsUpdates = supabaseModule.listenSettingsUpdates
-    supabase = supabaseModule.supabase
-
-    const routerModule = await import('./lib/router.js')
-    initializeRouter = routerModule.initializeRouter
-    handleMessages = routerModule.handleMessages
-
     await initializeRouter()
     botSettings = await getBotSettings()
     if (!botSettings) {
-      console.error('❌ Failed to load bot settings')
+      console.error('❌ Failed to configure system application settings data arrays')
       process.exit(1)
     }
-    console.log('✅ Settings loaded. Prefix:', botSettings.prefix)
+    console.log('✅ Application core state arrays mapped. Execution operational prefix:', botSettings.prefix)
 
     listenSettingsUpdates((newSettings) => {
       botSettings = newSettings
-      console.log('🔥 Settings updated live. Prefix:', newSettings.prefix)
+      console.log('🔥 Live database modification sync event intercepted. Active Prefix:', newSettings.prefix)
     })
 
     await connectToWhatsApp()
 
     server.listen(PORT, () => {
-      console.log(`🎁 DGIFT BOT running on port ${PORT}`)
-      console.log(`👑 Owner: obashjalash-droid - 0748548334`)
+      console.log(`🎁 DGIFT BOT engine actively polling on local environment port: ${PORT}`)
+      console.log(`👑 Registered Host Operator signature: obashjalash-droid`)
     })
 
   } catch (err) {
-    console.error('Bot failed to start:', err)
+    console.error('Fatal initialization vector failure killed runtime sequence:', err)
     process.exit(1)
   }
 }
 
-// 11. ANTI-CRASH
-process.on('uncaughtException', (err) => console.error('Caught exception:', err.message))
-process.on('unhandledRejection', (reason) => console.error('Unhandled Rejection:', reason))
+// ==========================================
+// 11. PERSISTENT GLOBAL UNCAUGHT EXCEPTION SAFE-GUARD
+// ==========================================
+process.on('uncaughtException', (err) => console.error('Intercepted global uncaught exception routine:', err.message))
+process.on('unhandledRejection', (reason) => console.error('Intercepted global asynchronous unhandled rejection routine:', reason))
 
 startBot()
-      
