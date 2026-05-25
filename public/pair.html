@@ -1,440 +1,802 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Meta Data -->
-  <title>DGIFT BOT - Pair Your Device</title>
+  <title>DGIFT BOT - Advanced Terminal Pair Management</title>
   <meta name="description" content="Pair your WhatsApp to DGIFT BOT. Fast, secure, and reliable WhatsApp bot with QR and Pair Code support.">
-  <meta name="theme-color" content="#5865F2">
+  <meta name="theme-color" content="#00f0ff">
 
-  <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://dgift-bot.onrender.com/pair">
-  <meta property="og:title" content="DGIFT BOT - Pair Your Device">
+  <meta property="og:title" content="DGIFT BOT - Advanced Terminal Pair Management">
   <meta property="og:description" content="Pair your WhatsApp to DGIFT BOT. Fast, secure, and reliable WhatsApp bot.">
   <meta property="og:image" content="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png">
 
-  <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:title" content="DGIFT BOT - Pair Your Device">
+  <meta property="twitter:title" content="DGIFT BOT - Advanced Terminal Pair Management">
   <meta property="twitter:description" content="Pair your WhatsApp to DGIFT BOT. Fast, secure, and reliable WhatsApp bot.">
   <meta property="twitter:image" content="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png">
 
   <link rel="icon" href="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png">
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;600;700&display=swap');
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-    :root {
-      --blurple: #5865F2;
-      --blurple-hover: #4752C4;
-      --green: #3BA55D;
-      --red: #ED4245;
-      --bg-primary: #313338;
-      --bg-secondary: #2B2D31;
-      --bg-tertiary: #1E1F22;
-      --bg-floating: #111214;
-      --text-normal: #DBDEE1;
-      --text-muted: #949BA4;
-      --text-link: #00A8FC;
-      --border: #1E1F22;
-      --input-bg: #1E1F22;
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+    :root[data-theme="dark"] {
+      --bg-base: #06070d;
+      --glass-bg: rgba(13, 16, 31, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      
+      /* Neon Glowments Configuration */
+      --neon-cyan: #00f0ff;
+      --neon-purple: #9d4edd;
+      --neon-pink: #ff007f;
+      --neon-yellow: #ffea00;
+      --neon-green: #39ff14;
+      --neon-black: #000000;
+      
+      --shadow-intensity: rgba(0, 240, 255, 0.15);
+    }
+
+    :root[data-theme="light"] {
+      --bg-base: #f8fafc;
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(15, 23, 42, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      
+      --neon-cyan: #0099ff;
+      --neon-purple: #7b2cbf;
+      --neon-pink: #d80064;
+      --neon-yellow: #e5b800;
+      --neon-green: #17b90f;
+      --neon-black: #ffffff;
+      
+      --shadow-intensity: rgba(123, 44, 191, 0.1);
     }
 
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
     body {
-      background: var(--bg-tertiary);
-      color: var(--text-normal);
+      background: var(--bg-base);
+      color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 20px;
+      overflow-x: hidden;
+      position: relative;
     }
 
-    /* Loading Screen */
+    /* Ambient Decorative Background Blur Circles */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      z-index: -1;
+      filter: blur(120px);
+      opacity: 0.4;
+      animation: pulseGlow 10s infinite alternate;
+    }
+    body::before {
+      top: 10%;
+      left: 10%;
+      background: linear-gradient(45deg, var(--neon-purple), var(--neon-pink));
+    }
+    body::after {
+      bottom: 10%;
+      right: 10%;
+      background: linear-gradient(45deg, var(--neon-cyan), var(--neon-yellow));
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(1); opacity: 0.3; }
+      100% { transform: scale(1.2); opacity: 0.5; }
+    }
+
+    /* Real Animated Fullscreen Loading Screen */
     .loader-wrapper {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: var(--bg-tertiary);
+      background: var(--bg-base);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.5s ease, cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .loader {
-      width: 32px;
-      height: 32px;
-      border: 4px solid var(--bg-secondary);
-      border-top: 4px solid var(--blurple);
+    .cyber-scanner {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border: 2px solid transparent;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      border-top-color: var(--neon-cyan);
+      border-bottom-color: var(--neon-pink);
+      animation: rotateScan 1.5s linear infinite;
     }
 
-    @keyframes spin {
+    .cyber-scanner::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      border: 2px solid transparent;
+      border-radius: 50%;
+      border-left-color: var(--neon-purple);
+      border-right-color: var(--neon-yellow);
+      animation: rotateScanReverse 1s linear infinite;
+    }
+
+    .loader-text {
+      margin-top: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    @keyframes rotateScan {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    .container {
-      width: 100%;
-      max-width: 480px;
-      background: var(--bg-primary);
-      border-radius: 8px;
-      padding: 32px;
-      box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
-      animation: fadeIn 0.3s ease;
+    @keyframes rotateScanReverse {
+      0% { transform: rotate(360deg); }
+      100% { transform: rotate(0deg); }
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
+    /* Top Utility Utility Header Bar */
+    .utility-bar {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 12px;
+      z-index: 100;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .logo {
-      width: 72px;
-      height: 72px;
+    .utility-btn {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+      padding: 10px;
       border-radius: 50%;
-      margin: 0 auto 16px;
-      background: var(--blurple);
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
     }
 
-    .logo img {
+    .utility-btn:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+      transform: translateY(-2px);
+    }
+
+    /* Primary Container with Glassmorphism Properties */
+    .container {
+      width: 100%;
+      max-width: 520px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.3), inset 0 1px 2px var(--glass-border);
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Stage Switching Animations */
+    .hidden-stage {
+      display: none !important;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    /* Header Profile Structuring */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo-frame {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      padding: 3px;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+      position: relative;
+      box-shadow: 0 0 20px var(--shadow-intensity);
+    }
+
+    .logo-frame img {
       width: 100%;
       height: 100%;
+      border-radius: 50%;
       object-fit: cover;
+      background: var(--bg-base);
     }
 
     .header h1 {
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--text-normal);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
       margin-bottom: 8px;
     }
 
     .header p {
       color: var(--text-muted);
-      font-size: 16px;
-      font-weight: 400;
+      font-size: 15px;
+      line-height: 1.5;
     }
 
-    .status {
+    /* English Informational Prose Context */
+    .prose-manifest {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-left: 3px solid var(--neon-purple);
+    }
+
+    .prose-manifest ul {
+      list-style: none;
+    }
+
+    .prose-manifest li {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .prose-manifest li:last-child {
+      margin-bottom: 0;
+    }
+
+    .prose-manifest i {
+      color: var(--neon-cyan);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Live Operational Status Block */
+    .status-badge {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: var(--bg-secondary);
-      border-radius: 4px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      font-weight: 500;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--glass-border);
     }
 
-    .status-dot {
+    .status-pulse {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background: var(--text-muted);
+      position: relative;
     }
 
-    .status-dot.connected {
-      background: var(--green);
+    .status-pulse.connected {
+      background: var(--neon-green);
+      box-shadow: 0 0 10px var(--neon-green);
     }
 
-    .qr-container {
-      background: var(--bg-secondary);
+    .status-pulse.connected::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--neon-green);
+      transform: scale(1);
+      animation: ripple 1.2s infinite ease-out;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    /* Functional Interactive Display Matrix (QR Area) */
+    .qr-viewport {
+      background: rgba(0, 0, 0, 0.3);
       padding: 24px;
-      border-radius: 8px;
-      margin-bottom: 16px;
+      border-radius: 16px;
+      margin-bottom: 20px;
       text-align: center;
-      min-height: 280px;
+      min-height: 260px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 1px solid var(--border);
+      border: 1px dashed var(--glass-border);
+      position: relative;
     }
 
-    .qr-container img {
-      max-width: 240px;
+    .qr-viewport img {
+      max-width: 210px;
       width: 100%;
-      border-radius: 8px;
+      border-radius: 12px;
       background: white;
-      padding: 16px;
+      padding: 12px;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
     }
 
-    .qr-placeholder {
+    .qr-placeholder-text {
       color: var(--text-muted);
-      font-size: 14px;
+      font-size: 13.5px;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
 
-    .divider {
+    /* Terminal Split Divider UI Element */
+    .divider-pane {
       display: flex;
       align-items: center;
-      margin: 20px 0;
+      margin: 24px 0;
       color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 2px;
     }
 
-    .divider::before, .divider::after {
+    .divider-pane::before, .divider-pane::after {
       content: '';
       flex: 1;
       height: 1px;
-      background: var(--border);
+      background: var(--glass-border);
     }
 
-    .divider span {
-      padding: 0 12px;
+    .divider-pane span {
+      padding: 0 16px;
     }
 
-    .input-group {
-      margin-bottom: 16px;
+    /* Core Form Input Control Elements */
+    .input-frame {
+      margin-bottom: 20px;
     }
 
-    .input-label {
+    .input-descriptor {
       display: block;
       margin-bottom: 8px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--text-muted);
+      letter-spacing: 1.5px;
       text-transform: uppercase;
     }
 
-    .input-group input {
+    .input-wrapper-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper-container i {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .input-wrapper-container input {
       width: 100%;
-      padding: 10px;
-      background: var(--input-bg);
-      border: none;
-      border-radius: 3px;
-      color: var(--text-normal);
-      font-size: 16px;
+      padding: 14px 14px 14px 44px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 15px;
+      font-family: 'JetBrains Mono', monospace;
       outline: none;
-      transition: 0.2s;
+      transition: all 0.3s ease;
     }
 
-    .input-group input:focus {
-      box-shadow: 0 0 0 2px var(--blurple);
+    .input-wrapper-container input:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+      background: rgba(0, 0, 0, 0.35);
     }
 
-    .btn {
+    /* System Action Buttons Configuration */
+    .cyber-btn {
       width: 100%;
-      padding: 12px;
-      background: var(--blurple);
+      padding: 15px;
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
       border: none;
-      border-radius: 3px;
+      border-radius: 12px;
       color: white;
-      font-size: 16px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: 0.17s;
-    }
-
-    .btn:hover {
-      background: var(--blurple-hover);
-    }
-
-    .btn:active {
-      background: #3C45A5;
-      transform: scale(0.99);
-    }
-
-    .btn:disabled {
-      background: #4E5058;
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-
-    .code-display {
-      text-align: center;
-      font-size: 32px;
+      font-size: 15px;
       font-weight: 700;
-      letter-spacing: 12px;
-      padding: 20px;
-      background: var(--bg-secondary);
-      border-radius: 4px;
-      margin-top: 16px;
-      border: 2px dashed var(--blurple);
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(255, 0, 127, 0.2);
+    }
+
+    .cyber-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 0, 127, 0.4);
+      filter: brightness(1.1);
+    }
+
+    .cyber-btn:active {
+      transform: translateY(0);
+    }
+
+    .cyber-btn:disabled {
+      background: #334155;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    .cyber-btn-secondary {
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+    }
+
+    .cyber-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--text-muted);
+      box-shadow: none;
+    }
+
+    /* Cryptographic Security Pairing Token Display Grid */
+    .code-matrix-output {
+      text-align: center;
+      font-size: 28px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 8px;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      margin-top: 20px;
+      border: 2px dashed var(--neon-yellow);
       display: none;
-      color: var(--text-normal);
+      color: var(--neon-yellow);
+      text-shadow: 0 0 12px rgba(255, 234, 0, 0.3);
+      animation: scanlinePulse 2s infinite alternate;
     }
 
-    .error {
-      color: var(--red);
+    @keyframes scanlinePulse {
+      0% { box-shadow: inset 0 0 10px rgba(255, 234, 0, 0.1); }
+      100% { box-shadow: inset 0 0 20px rgba(255, 234, 0, 0.25); }
+    }
+
+    /* Global Realtime System Output Warnings */
+    .error-terminal {
+      color: var(--neon-pink);
+      background: rgba(237, 66, 69, 0.08);
+      border: 1px solid rgba(237, 66, 69, 0.2);
+      padding: 12px;
+      border-radius: 8px;
       text-align: center;
-      margin-top: 12px;
+      margin-top: 16px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .success-terminal-alert {
+      color: var(--neon-green);
+      font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
-      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
     }
 
-    .footer {
+    /* Footnote Core Telemetry Signatures */
+    .footer-stamp {
       text-align: center;
-      margin-top: 24px;
+      margin-top: 32px;
       color: var(--text-muted);
       font-size: 12px;
+      line-height: 1.6;
     }
 
-    .footer a {
-      color: var(--text-link);
+    .footer-stamp a {
+      color: var(--neon-cyan);
       text-decoration: none;
+      font-family: 'JetBrains Mono', monospace;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
     }
 
-    .footer a:hover {
+    .footer-stamp a:hover {
       text-decoration: underline;
     }
 
-    .success-message {
-      color: var(--green);
-      font-weight: 600;
-    }
-
-    @media (max-width: 480px) {
+    /* Responsive Architecture Layout Fixes */
+    @media (max-width: 540px) {
       .container {
-        padding: 24px 16px;
+        padding: 28px 20px;
       }
-      
-      .code-display {
-        font-size: 24px;
-        letter-spacing: 8px;
+      .code-matrix-output {
+        font-size: 20px;
+        letter-spacing: 4px;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Loading Screen -->
-  <div class="loader-wrapper" id="loader">
-    <div class="loader"></div>
+
+  <div class="loader-wrapper" id="loaderOverlay">
+    <div class="cyber-scanner"></div>
+    <div class="loader-text">INITIALIZING CORE MATRIX...</div>
   </div>
 
-  <!-- Main Container -->
+  <div class="utility-bar">
+    <button class="utility-btn" id="themeToggleBtn" title="Toggle System Workspace Theme">
+      <i data-lucide="moon" id="themeIcon"></i>
+    </button>
+  </div>
+
   <div class="container">
-    <div class="header">
-      <div class="logo">
-        <img src="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png" alt="DGIFT BOT">
+    
+    <div id="stageLanding">
+      <div class="header">
+        <div class="logo-frame">
+          <img src="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png" alt="DGIFT BOT LOGO RESOURCE">
+        </div>
+        <h1>DGIFT ENGINE INTERFACE</h1>
+        <p>Deployment Node Cluster Workspace Management Terminal</p>
       </div>
-      <h1>Welcome to DGIFT BOT</h1>
-      <p>Pair your WhatsApp device to get started</p>
+
+      <div class="prose-manifest">
+        <ul>
+          <li><i data-lucide="shield-check"></i> <span><strong>High-Security Pipeline:</strong> Full session token parsing architecture layered on end-to-end cloud protection.</span></li>
+          <li><i data-lucide="zap"></i> <span><strong>Realtime Sync States:</strong> Integrated live data replication via Supabase architecture protocols.</span></li>
+          <li><i data-lucide="cpu"></i> <span><strong>Zero Latency Routine:</strong> Asynchronous multi-device clustering execution processing environment.</span></li>
+        </ul>
+      </div>
+
+      <button class="cyber-btn" id="enterPairingBtn">
+        <span>GET STARTED</span>
+        <i data-lucide="arrow-right"></i>
+      </button>
     </div>
 
-    <div class="status" id="status">
-      <div class="status-dot" id="statusDot"></div>
-      <span id="statusText">Connecting to server...</span>
+    <div id="stagePairing" class="hidden-stage">
+      <div class="header">
+        <div class="logo-frame">
+          <img src="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png" alt="DGIFT BOT LOGO RESOURCE">
+        </div>
+        <h1>DEVICE AUTHENTICATION</h1>
+        <p>Establish persistent connectivity parameters below</p>
+      </div>
+
+      <div class="status-badge" id="statusConsole">
+        <div class="status-pulse" id="statusIndicator"></div>
+        <span id="statusLabel">Awaiting handshake profile...</span>
+      </div>
+
+      <div class="qr-viewport" id="qrGraphicsBox">
+        <div class="qr-placeholder-text">
+          <i data-lucide="qr-code" style="width: 40px; height: 40px; color: var(--neon-cyan);"></i>
+          <span>Generating stream matrix...</span>
+        </div>
+      </div>
+
+      <div class="divider-pane"><span>OR USE PAIR TOKEN</span></div>
+
+      <div class="input-frame">
+        <label class="input-descriptor" for="phoneInputNode">Terminal Operator Number</label>
+        <div class="input-wrapper-container">
+          <i data-lucide="smartphone"></i>
+          <input type="text" id="phoneInputNode" placeholder="e.g. 254748548334" autocomplete="off">
+        </div>
+      </div>
+
+      <button class="cyber-btn cyber-btn-secondary" id="requestPairTokenBtn">
+        <i data-lucide="key-round"></i>
+        <span>GENERATE PAIR CODE</span>
+      </button>
+
+      <div class="code-matrix-output" id="tokenDisplayMatrix"></div>
+      
+      <div class="error-terminal" id="errorConsoleLogs">
+        <i data-lucide="alert-triangle"></i>
+        <span id="errorTextSpan">Handshake fault exception caught.</span>
+      </div>
     </div>
 
-    <div class="qr-container" id="qrBox">
-      <div class="qr-placeholder">Waiting for QR Code...</div>
+    <div class="footer-stamp">
+      Powered by Dgift Bot Engine Cluster • Core Operator: obashjalash-droid<br>
+      <a href="tel:254748548334"><i data-lucide="phone-call" style="width: 12px; height: 12px;"></i> +254 748 548 334</a>
     </div>
 
-    <div class="divider"><span>OR</span></div>
-
-    <div class="input-group">
-      <label class="input-label" for="phoneNumber">Phone Number</label>
-      <input type="text" id="phoneNumber" placeholder="e.g. 254748548334" autocomplete="off">
-    </div>
-
-    <button class="btn" id="getCodeBtn">Get Pairing Code</button>
-    <div class="code-display" id="codeDisplay"></div>
-    <div class="error" id="error"></div>
-
-    <div class="footer">
-      Powered by Dgift Bot • Owner: obashjalash-droid<br>
-      <a href="tel:0748548334">0748548334</a>
-    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    // System Handlers and Element Pointers
     const socket = io();
-    const statusText = document.getElementById('statusText');
-    const statusDot = document.getElementById('statusDot');
-    const qrBox = document.getElementById('qrBox');
-    const getCodeBtn = document.getElementById('getCodeBtn');
-    const phoneInput = document.getElementById('phoneNumber');
-    const codeDisplay = document.getElementById('codeDisplay');
-    const errorEl = document.getElementById('error');
-    const loader = document.getElementById('loader');
+    const loaderOverlay = document.getElementById('loaderOverlay');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    
+    // Stages Switches
+    const stageLanding = document.getElementById('stageLanding');
+    const stagePairing = document.getElementById('stagePairing');
+    const enterPairingBtn = document.getElementById('enterPairingBtn');
 
-    // Hide loader when page loads
+    // Interactive Core Nodes
+    const statusLabel = document.getElementById('statusLabel');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const qrGraphicsBox = document.getElementById('qrGraphicsBox');
+    const requestPairTokenBtn = document.getElementById('requestPairTokenBtn');
+    const phoneInputNode = document.getElementById('phoneInputNode');
+    const tokenDisplayMatrix = document.getElementById('tokenDisplayMatrix');
+    const errorConsoleLogs = document.getElementById('errorConsoleLogs');
+    const errorTextSpan = document.getElementById('errorTextSpan');
+
+    // Initialize Lucide Vector Icons Asset Maps
+    lucide.createIcons();
+
+    // Kill Loader Sequence on Complete Execution Thread
     window.addEventListener('load', () => {
       setTimeout(() => {
-        loader.style.opacity = '0';
-        setTimeout(() => loader.style.display = 'none', 300);
-      }, 500);
+        loaderOverlay.style.opacity = '0';
+        setTimeout(() => loaderOverlay.style.display = 'none', 500);
+      }, 800);
     });
 
-    // Socket events
-    socket.on('status', (msg) => {
-      statusText.textContent = msg;
-      if (msg === 'Connected') {
-        statusDot.classList.add('connected');
-        qrBox.innerHTML = '<div class="success-message">✅ Device Paired Successfully!</div>';
-        getCodeBtn.disabled = true;
+    // Theme Switch Management Engine
+    themeToggleBtn.addEventListener('click', () => {
+      const activeTheme = document.documentElement.getAttribute('data-theme');
+      const targetTheme = activeTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', targetTheme);
+      themeIcon.setAttribute('data-lucide', targetTheme === 'dark' ? 'moon' : 'sun');
+      lucide.createIcons();
+    });
+
+    // UI Smooth Stage Progression Flow Hook
+    enterPairingBtn.addEventListener('click', () => {
+      stageLanding.style.opacity = '0';
+      setTimeout(() => {
+        stageLanding.style.display = 'none';
+        stagePairing.classList.remove('hidden-stage');
+        stagePairing.style.opacity = '1';
+      }, 300);
+    });
+
+    // Enforce Kenyan international structural syntax validation inside numbers frame
+    phoneInputNode.addEventListener('input', (e) => {
+      let numericOutput = e.target.value.replace(/[^0-9]/g, '');
+      
+      // Auto-enforce Kenyan baseline country code signature format context natively
+      if (numericOutput.length > 0 && !numericOutput.startsWith('254')) {
+        if (numericOutput.startsWith('0')) {
+          numericOutput = '254' + numericOutput.substring(1);
+        } else {
+          numericOutput = '254' + numericOutput;
+        }
+      }
+      e.target.value = numericOutput;
+    });
+
+    // Network Layer Event Socket Stream Definitions
+    socket.on('status', (serverPayloadState) => {
+      statusLabel.textContent = serverPayloadState.toUpperCase();
+      
+      if (serverPayloadState === 'Connected') {
+        statusIndicator.className = 'status-pulse connected';
+        qrGraphicsBox.innerHTML = `
+          <div class="success-terminal-alert">
+            <i data-lucide="check-circle-2" style="width: 48px; height: 48px; color: var(--neon-green);"></i>
+            <span>AUTHENTICATION MATRIX STABILIZED</span>
+          </div>`;
+        requestPairTokenBtn.disabled = true;
+        phoneInputNode.disabled = true;
+        tokenDisplayMatrix.style.display = 'none';
+        lucide.createIcons();
       } else {
-        statusDot.classList.remove('connected');
+        statusIndicator.className = 'status-pulse';
       }
     });
 
-    socket.on('qr', (qrImage) => {
-      qrBox.innerHTML = `<img src="${qrImage}" alt="Scan QR Code">`;
-      statusText.textContent = 'Scan QR with WhatsApp';
+    socket.on('qr', (base64MatrixImageString) => {
+      qrGraphicsBox.innerHTML = `<img src="${base64MatrixImageString}" alt="Cryptographic Authorization QR Stream Object">`;
+      statusLabel.textContent = 'SCAN MATRIX QR WITH TARGET WHATSAPP';
     });
 
-    socket.on('pair_code', (code) => {
-      codeDisplay.style.display = 'block';
-      codeDisplay.textContent = code;
-      statusText.textContent = 'Enter this code in WhatsApp';
-      errorEl.textContent = '';
+    socket.on('pair_code', (cryptographicPairTokenCode) => {
+      tokenDisplayMatrix.style.display = 'block';
+      tokenDisplayMatrix.textContent = cryptographicPairTokenCode;
+      statusLabel.textContent = 'ENTER TOKEN DIRECTLY INTO DEVICE LINK PROMPT';
+      errorConsoleLogs.style.display = 'none';
+      requestPairTokenBtn.textContent = 'GENERATE PAIR CODE';
+      requestPairTokenBtn.disabled = false;
     });
 
-    socket.on('pair_error', (err) => {
-      errorEl.textContent = err;
-      getCodeBtn.disabled = false;
+    socket.on('pair_error', (exceptionHandshakeLogString) => {
+      errorTextSpan.textContent = exceptionHandshakeLogString.toUpperCase();
+      errorConsoleLogs.style.display = 'flex';
+      requestPairTokenBtn.textContent = 'GENERATE PAIR CODE';
+      requestPairTokenBtn.disabled = false;
     });
 
-    // Get Pair Code
-    getCodeBtn.addEventListener('click', () => {
-      const phoneNumber = phoneInput.value.trim().replace(/[^0-9]/g, '');
-      if (phoneNumber.length < 10) {
-        errorEl.textContent = 'Please enter a valid number with country code';
+    // Dispatch Event Execution Requests to Node Infrastructure
+    requestPairTokenBtn.addEventListener('click', () => {
+      const userNumberPayloadString = phoneInputNode.value.trim();
+      
+      if (userNumberPayloadString.length < 12) {
+        errorTextSpan.textContent = 'INVALID VALUE: SYSTEM REQUIRE COMPLETE INTERNATIONAL TOKEN FORMAT (254...)';
+        errorConsoleLogs.style.display = 'flex';
         return;
       }
-      errorEl.textContent = '';
-      getCodeBtn.disabled = true;
-      getCodeBtn.textContent = 'Generating...';
-      socket.emit('request_pair_code', phoneNumber);
 
+      errorConsoleLogs.style.display = 'none';
+      requestPairTokenBtn.disabled = true;
+      requestPairTokenBtn.textContent = 'POLLING NODE TERMINAL...';
+      
+      socket.emit('request_pair_code', userNumberPayloadString);
+
+      // Guard break logic timeout block
       setTimeout(() => {
-        getCodeBtn.disabled = false;
-        getCodeBtn.textContent = 'Get Pairing Code';
-      }, 5000);
+        if (requestPairTokenBtn.disabled && tokenDisplayMatrix.style.display !== 'block') {
+          requestPairTokenBtn.disabled = false;
+          requestPairTokenBtn.textContent = 'GENERATE PAIR CODE';
+        }
+      }, 12000);
     });
 
-    // Enter key support
-    phoneInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') getCodeBtn.click();
+    phoneInputNode.addEventListener('keypress', (eventArgs) => {
+      if (eventArgs.key === 'Enter') requestPairTokenBtn.click();
     });
   </script>
 </body>
