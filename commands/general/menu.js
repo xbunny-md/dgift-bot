@@ -5,75 +5,87 @@ import { getAllCommands } from '../../lib/router.js'
 export const name = 'menu'
 export const alias = ['help', 'list', 'commands']
 export const category = 'General'
-export const desc = 'Show all commands and bot info'
+export const desc = 'Displays the complete system interface panel dynamically categorized with server statistics'
 
-export default async function menu(sock, { msg, from, pushName, sender }, botSettings) {
+/**
+ * Highly Optimized Dynamic Menu Generation Engine
+ */
+export default async function executeAutonomousCommand(sock, { msg, from, pushName, sender }, botSettings) {
   try {
     await sock.sendMessage(from, { react: { text: '🐇', key: msg.key } })
 
-    const uptimeSec = process.uptime()
-    const hours = Math.floor(uptimeSec / 3600)
-    const minutes = Math.floor((uptimeSec % 3600) / 60)
-    const seconds = Math.floor(uptimeSec % 60)
-    const uptimeStr = `${hours}h ${minutes}m ${seconds}s`
+    const totalUptimeSeconds = process.uptime()
+    const calculationHours = Math.floor(totalUptimeSeconds / 3600)
+    const calculationMinutes = Math.floor((totalUptimeSeconds % 3600) / 60)
+    const calculationSeconds = Math.floor(totalUptimeSeconds % 60)
+    const structuredUptimeString = `${calculationHours}h ${calculationMinutes}m ${calculationSeconds}s`
 
-    const totalMem = os.totalmem()
-    const freeMem = os.freem()
-    const usedMemRatio = (totalMem - freeMem) / totalMem
-    const ramBar = '█'.repeat(Math.round(usedMemRatio * 10)) + '▒'.repeat(10 - Math.round(usedMemRatio * 10))
-    const ramPercent = Math.round(usedMemRatio * 100)
+    const totalSystemMemoryBytes = os.totalmem()
+    const freeSystemMemoryBytes = os.freem()
+    const globalMemoryUtilizationRatio = (totalSystemMemoryBytes - freeSystemMemoryBytes) / totalSystemMemoryBytes
+    const dynamicRamProgressBar = '█'.repeat(Math.round(globalMemoryUtilizationRatio * 10)) + '▒'.repeat(10 - Math.round(globalMemoryUtilizationRatio * 10))
+    const totalRamUtilizationPercentage = Math.round(globalMemoryUtilizationRatio * 100)
 
-    const platform = os.platform() === 'linux'? '🐧 Linux' : '🪟 Windows'
-    const user = pushName || sender.split('@')[0]
+    const underlyingOperatingPlatform = os.platform() === 'linux'? '🐧 Linux' : '🪟 Windows'
+    const userIdentity = pushName || sender.split('@')[0]
 
+    // Get commands from router.js
     const allCommands = getAllCommands()
-    const commandsByCat = {}
+    const dynamicCommandCatalog = {}
 
     for (const [cmdName, cmdData] of allCommands) {
-      const cat = (cmdData.category || 'Other').toUpperCase()
-      if (!commandsByCat[cat]) commandsByCat[cat] = []
-      commandsByCat[cat].push(cmdName)
+      const category = (cmdData.category || 'Uncategorized').toUpperCase()
+      if (!dynamicCommandCatalog[category]) dynamicCommandCatalog[category] = []
+      dynamicCommandCatalog[category].push(cmdName)
     }
 
-    const prefix = botSettings.prefix || '.'
-    const botName = botSettings.botname || 'bot'
-    const ownerName = botSettings.owner_name || 'Owner'
-    const brandName = botSettings.brand_name || ownerName
-    const menuImage = botSettings.menu_image || null
+    const systemPrefixToken = botSettings.prefix || '.'
+    const configuredBotName = botSettings.botname || 'Bot'
+    const configuredOwnerName = botSettings.owner_name || 'Owner'
+    const brandName = botSettings.brand_name || configuredOwnerName
 
-    let menuText =
-`╭──⌈ ${botName} ⌋
-│ User: ${user}
-│ Owner: ${ownerName}
-│ Prefix: ${prefix}
-│ Platform: ${platform}
-│ Uptime: ${uptimeStr}
-│ RAM: ${ramBar} ${ramPercent}%
-╰────────────────
+    // Database based image URL with fallback
+    const primaryMenuImage = botSettings.menu_image || null
+    const fallbackMenuImage = 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
 
-`
+    let primaryConstructedMenuBuffer =
+`╭──⌈ ${configuredBotName} ⌋
+│ User: ${userIdentity}
+│ Owner: ${configuredOwnerName}
+│ Prefix: [ ${systemPrefixToken} ]
+│ Platform: ${underlyingOperatingPlatform}
+│ Uptime: ${structuredUptimeString}
+│ RAM: ${dynamicRamProgressBar} ${totalRamUtilizationPercentage}%
+╰────────────────\n\n`
 
-    for (const cat of Object.keys(commandsByCat).sort()) {
-      menuText += `╭──⌈ ${cat} ⌋\n`
-      commandsByCat[cat].sort().forEach(cmd => {
-        menuText += `│ ${prefix}${cmd}\n`
+    for (const cat of Object.keys(dynamicCommandCatalog).sort()) {
+      primaryConstructedMenuBuffer += `╭──⌈ ${cat} ⌋\n`
+      dynamicCommandCatalog[cat].sort().forEach(cmd => {
+        primaryConstructedMenuBuffer += `│ ${systemPrefixToken}${cmd}\n`
       })
-      menuText += `╰────────────────\n\n`
+      primaryConstructedMenuBuffer += `╰────────────────\n\n`
     }
 
-    menuText += `**Powered by ${brandName}**`
+    primaryConstructedMenuBuffer += `*Powered by ${brandName}*`
 
-    if (menuImage) {
+    // Try primary image first, fallback if it fails
+    const imageUrl = primaryMenuImage || fallbackMenuImage
+
+    try {
       await sock.sendMessage(from, {
-        image: { url: menuImage },
-        caption: menuText
+        image: { url: imageUrl },
+        caption: primaryConstructedMenuBuffer
       }, { quoted: msg })
-    } else {
-      await sock.sendMessage(from, { text: menuText }, { quoted: msg })
+    } catch (err) {
+      console.log('Primary menu image failed, using fallback:', err.message)
+      await sock.sendMessage(from, {
+        image: { url: fallbackMenuImage },
+        caption: primaryConstructedMenuBuffer
+      }, { quoted: msg })
     }
 
   } catch (e) {
-    console.error("Menu Error:", e.message)
-    await sock.sendMessage(from, { text: "Menu failed to load. Try again." }, { quoted: msg })
+    console.error('Menu Error:', e.message)
+    await sock.sendMessage(from, { text: 'Menu failed to load. Try again.' }, { quoted: msg })
   }
 }
