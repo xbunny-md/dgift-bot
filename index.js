@@ -378,7 +378,7 @@ io.on('connection', (socket) => {
 // ==========================================
 async function sendConfirmationMessage() {
   const s = botSettings
-  const imageUrl = 'https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png'
+  const imageUrl = 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
   const formatBool = (val) => val ? 'On' : 'Off'
 
   const botPushName = sock.user?.name || sock.user?.id?.split(':')[0] || 'User'
