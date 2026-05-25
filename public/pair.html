@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Meta Data -->
+  <title>DGIFT BOT - Pair Your Device</title>
+  <meta name="description" content="Pair your WhatsApp to DGIFT BOT. Fast, secure, and reliable WhatsApp bot with QR and Pair Code support.">
+  <meta name="theme-color" content="#5865F2">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dgift-bot.onrender.com/pair">
+  <meta property="og:title" content="DGIFT BOT - Pair Your Device">
+  <meta property="og:description" content="Pair your WhatsApp to DGIFT BOT. Fast, secure, and reliable WhatsApp bot.">
+  <meta property="og:image" content="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:title" content="DGIFT BOT - Pair Your Device">
+  <meta property="twitter:description" content="Pair your WhatsApp to DGIFT BOT. Fast, secure, and reliable WhatsApp bot.">
+  <meta property="twitter:image" content="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png">
+
+  <link rel="icon" href="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --blurple: #5865F2;
+      --blurple-hover: #4752C4;
+      --green: #3BA55D;
+      --red: #ED4245;
+      --bg-primary: #313338;
+      --bg-secondary: #2B2D31;
+      --bg-tertiary: #1E1F22;
+      --bg-floating: #111214;
+      --text-normal: #DBDEE1;
+      --text-muted: #949BA4;
+      --text-link: #00A8FC;
+      --border: #1E1F22;
+      --input-bg: #1E1F22;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg-tertiary);
+      color: var(--text-normal);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Loading Screen */
+    .loader-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loader {
+      width: 32px;
+      height: 32px;
+      border: 4px solid var(--bg-secondary);
+      border-top: 4px solid var(--blurple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 32px;
+      box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      background: var(--blurple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-normal);
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 16px;
+      font-weight: 400;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-dot.connected {
+      background: var(--green);
+    }
+
+    .qr-container {
+      background: var(--bg-secondary);
+      padding: 24px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      text-align: center;
+      min-height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+    }
+
+    .qr-container img {
+      max-width: 240px;
+      width: 100%;
+      border-radius: 8px;
+      background: white;
+      padding: 16px;
+    }
+
+    .qr-placeholder {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider span {
+      padding: 0 12px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      background: var(--input-bg);
+      border: none;
+      border-radius: 3px;
+      color: var(--text-normal);
+      font-size: 16px;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    .input-group input:focus {
+      box-shadow: 0 0 0 2px var(--blurple);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--blurple);
+      border: none;
+      border-radius: 3px;
+      color: white;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.17s;
+    }
+
+    .btn:hover {
+      background: var(--blurple-hover);
+    }
+
+    .btn:active {
+      background: #3C45A5;
+      transform: scale(0.99);
+    }
+
+    .btn:disabled {
+      background: #4E5058;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .code-display {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 12px;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      margin-top: 16px;
+      border: 2px dashed var(--blurple);
+      display: none;
+      color: var(--text-normal);
+    }
+
+    .error {
+      color: var(--red);
+      text-align: center;
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .footer a {
+      color: var(--text-link);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    .success-message {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 24px 16px;
+      }
+      
+      .code-display {
+        font-size: 24px;
+        letter-spacing: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div class="loader-wrapper" id="loader">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <img src="https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png" alt="DGIFT BOT">
+      </div>
+      <h1>Welcome to DGIFT BOT</h1>
+      <p>Pair your WhatsApp device to get started</p>
+    </div>
+
+    <div class="status" id="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting to server...</span>
+    </div>
+
+    <div class="qr-container" id="qrBox">
+      <div class="qr-placeholder">Waiting for QR Code...</div>
+    </div>
+
+    <div class="divider"><span>OR</span></div>
+
+    <div class="input-group">
+      <label class="input-label" for="phoneNumber">Phone Number</label>
+      <input type="text" id="phoneNumber" placeholder="e.g. 254748548334" autocomplete="off">
+    </div>
+
+    <button class="btn" id="getCodeBtn">Get Pairing Code</button>
+    <div class="code-display" id="codeDisplay"></div>
+    <div class="error" id="error"></div>
+
+    <div class="footer">
+      Powered by Dgift Bot • Owner: obashjalash-droid<br>
+      <a href="tel:0748548334">0748548334</a>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const qrBox = document.getElementById('qrBox');
+    const getCodeBtn = document.getElementById('getCodeBtn');
+    const phoneInput = document.getElementById('phoneNumber');
+    const codeDisplay = document.getElementById('codeDisplay');
+    const errorEl = document.getElementById('error');
+    const loader = document.getElementById('loader');
+
+    // Hide loader when page loads
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 300);
+      }, 500);
+    });
+
+    // Socket events
+    socket.on('status', (msg) => {
+      statusText.textContent = msg;
+      if (msg === 'Connected') {
+        statusDot.classList.add('connected');
+        qrBox.innerHTML = '<div class="success-message">✅ Device Paired Successfully!</div>';
+        getCodeBtn.disabled = true;
+      } else {
+        statusDot.classList.remove('connected');
+      }
+    });
+
+    socket.on('qr', (qrImage) => {
+      qrBox.innerHTML = `<img src="${qrImage}" alt="Scan QR Code">`;
+      statusText.textContent = 'Scan QR with WhatsApp';
+    });
+
+    socket.on('pair_code', (code) => {
+      codeDisplay.style.display = 'block';
+      codeDisplay.textContent = code;
+      statusText.textContent = 'Enter this code in WhatsApp';
+      errorEl.textContent = '';
+    });
+
+    socket.on('pair_error', (err) => {
+      errorEl.textContent = err;
+      getCodeBtn.disabled = false;
+    });
+
+    // Get Pair Code
+    getCodeBtn.addEventListener('click', () => {
+      const phoneNumber = phoneInput.value.trim().replace(/[^0-9]/g, '');
+      if (phoneNumber.length < 10) {
+        errorEl.textContent = 'Please enter a valid number with country code';
+        return;
+      }
+      errorEl.textContent = '';
+      getCodeBtn.disabled = true;
+      getCodeBtn.textContent = 'Generating...';
+      socket.emit('request_pair_code', phoneNumber);
+
+      setTimeout(() => {
+        getCodeBtn.disabled = false;
+        getCodeBtn.textContent = 'Get Pairing Code';
+      }, 5000);
+    });
+
+    // Enter key support
+    phoneInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') getCodeBtn.click();
+    });
+  </script>
+</body>
+</html>
