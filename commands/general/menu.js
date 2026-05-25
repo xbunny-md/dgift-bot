@@ -5,70 +5,72 @@ import { getAllCommands } from '../../lib/router.js'
 export const name = 'menu'
 export const alias = ['help', 'list', 'commands']
 export const category = 'General'
-export const desc = 'Displays the complete system interface panel dynamically categorized with server statistic'
+export const desc = 'Show all commands and bot info'
 
-/**
- * Highly Optimized Dynamic Menu Generation Engine
- */
-export default async function executeAutonomousCommand(sock, { msg, from, pushName, sender }, botSettings) {
+export default async function menu(sock, { msg, from, pushName, sender }, botSettings) {
   try {
     await sock.sendMessage(from, { react: { text: '🐇', key: msg.key } })
 
-    const totalUptimeSeconds = process.uptime()
-    const calculationHours = Math.floor(totalUptimeSeconds / 3600)
-    const calculationMinutes = Math.floor((totalUptimeSeconds % 3600) / 60)
-    const calculationSeconds = Math.floor(totalUptimeSeconds % 60)
-    const structuredUptimeString = `${calculationHours}h ${calculationMinutes}m ${calculationSeconds}s`
+    const uptimeSec = process.uptime()
+    const hours = Math.floor(uptimeSec / 3600)
+    const minutes = Math.floor((uptimeSec % 3600) / 60)
+    const seconds = Math.floor(uptimeSec % 60)
+    const uptimeStr = `${hours}h ${minutes}m ${seconds}s`
 
-    const totalSystemMemoryBytes = os.totalmem()
-    const freeSystemMemoryBytes = os.freemem()
-    const globalMemoryUtilizationRatio = (totalSystemMemoryBytes - freeSystemMemoryBytes) / totalSystemMemoryBytes
-    const dynamicRamProgressBar = '█'.repeat(Math.round(globalMemoryUtilizationRatio * 10)) + '▒'.repeat(10 - Math.round(globalMemoryUtilizationRatio * 10))
-    const totalRamUtilizationPercentage = Math.round(globalMemoryUtilizationRatio * 100)
+    const totalMem = os.totalmem()
+    const freeMem = os.freem()
+    const usedMemRatio = (totalMem - freeMem) / totalMem
+    const ramBar = '█'.repeat(Math.round(usedMemRatio * 10)) + '▒'.repeat(10 - Math.round(usedMemRatio * 10))
+    const ramPercent = Math.round(usedMemRatio * 100)
 
-    const underlyingOperatingPlatform = os.platform() === 'linux'? '🐧 Linux' : '🪟 Windows'
-    const userIdentity = pushName || sender.split('@')[0]
+    const platform = os.platform() === 'linux'? '🐧 Linux' : '🪟 Windows'
+    const user = pushName || sender.split('@')[0]
 
-    // Get commands from router.js - no more fs scanning
     const allCommands = getAllCommands()
-    const dynamicCommandCatalog = {}
+    const commandsByCat = {}
 
     for (const [cmdName, cmdData] of allCommands) {
-      const category = (cmdData.category || 'Uncategorized').toUpperCase()
-      if (!dynamicCommandCatalog[category]) dynamicCommandCatalog[category] = []
-      dynamicCommandCatalog[category].push(cmdName)
+      const cat = (cmdData.category || 'Other').toUpperCase()
+      if (!commandsByCat[cat]) commandsByCat[cat] = []
+      commandsByCat[cat].push(cmdName)
     }
 
-    const systemPrefixToken = botSettings.prefix || '!'
-    const configuredBotName = botSettings.botname || 'dgift-bot'
-    const configuredOwnerName = botSettings.owner_name || 'obashjalash-droid'
-    const footerText = 'Powered by obashjalash-droid'
+    const prefix = botSettings.prefix || '.'
+    const botName = botSettings.botname || 'bot'
+    const ownerName = botSettings.owner_name || 'Owner'
+    const brandName = botSettings.brand_name || ownerName
+    const menuImage = botSettings.menu_image || null
 
-    let primaryConstructedMenuBuffer =
-`╭──⌈ ${configuredBotName} ⌋
-│ User: ${userIdentity}
-│ Owner: ${configuredOwnerName}
-│ Prefix: [ ${systemPrefixToken} ]
-│ Platform: ${underlyingOperatingPlatform}
-│ Uptime: ${structuredUptimeString}
-│ RAM: ${dynamicRamProgressBar} ${totalRamUtilizationPercentage}%
-╰────────────────\n\n`
+    let menuText =
+`╭──⌈ ${botName} ⌋
+│ User: ${user}
+│ Owner: ${ownerName}
+│ Prefix: ${prefix}
+│ Platform: ${platform}
+│ Uptime: ${uptimeStr}
+│ RAM: ${ramBar} ${ramPercent}%
+╰────────────────
 
-    for (const cat of Object.keys(dynamicCommandCatalog).sort()) {
-      primaryConstructedMenuBuffer += `╭──⌈ ${cat} ⌋\n`
-      dynamicCommandCatalog[cat].sort().forEach(cmd => {
-        primaryConstructedMenuBuffer += `│ ${systemPrefixToken}${cmd}\n`
+`
+
+    for (const cat of Object.keys(commandsByCat).sort()) {
+      menuText += `╭──⌈ ${cat} ⌋\n`
+      commandsByCat[cat].sort().forEach(cmd => {
+        menuText += `│ ${prefix}${cmd}\n`
       })
-      primaryConstructedMenuBuffer += `╰────────────────\n\n`
+      menuText += `╰────────────────\n\n`
     }
 
-    primaryConstructedMenuBuffer += `${footerText}`
+    menuText += `**Powered by ${brandName}**`
 
-    // Send with direct URL - no temp file needed
-    await sock.sendMessage(from, {
-      image: { url: 'https://i.ibb.co/Mdg2Fkd/file-00000000f41871fdb744b8a6b7b612fa.png' },
-      caption: primaryConstructedMenuBuffer
-    }, { quoted: msg })
+    if (menuImage) {
+      await sock.sendMessage(from, {
+        image: { url: menuImage },
+        caption: menuText
+      }, { quoted: msg })
+    } else {
+      await sock.sendMessage(from, { text: menuText }, { quoted: msg })
+    }
 
   } catch (e) {
     console.error("Menu Error:", e.message)
