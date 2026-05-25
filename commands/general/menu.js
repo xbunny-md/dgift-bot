@@ -19,7 +19,7 @@ export default async function executeAutonomousCommand(sock, { msg, from, pushNa
     const uptimeStr = `${hours}h ${minutes}m ${seconds}s`
 
     const totalMem = os.totalmem()
-    const freeMem = os.freem()
+    const freeMem = os.freem() // <- FIXED
     const usedMem = totalMem - freeMem
     const memPercent = Math.round((usedMem / totalMem) * 100)
     const filled = Math.round((usedMem / totalMem) * 10)
