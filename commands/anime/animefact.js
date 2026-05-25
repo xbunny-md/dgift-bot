@@ -30,7 +30,7 @@ const FACT_APIS = [
   },
   async () => {
     const res = await axios.post('https://graphql.anilist.co', {
-      query: `query { Page(page: ${Math.floor(Math.random() * 1000)}, perPage: 1) { media(type: ANIME) { title { romaji } description coverImage { large }`
+      query: `query { Page(page: ${Math.floor(Math.random() * 1000)}, perPage: 1) { media(type: ANIME) { title { romaji } description coverImage { large }}}`
     }, { timeout: TIMEOUT })
     const a = res.data?.data?.Page?.media?.[0]
     if (!a) return null
@@ -138,7 +138,7 @@ const FACT_APIS = [
 export default async function animefact(sock, { msg, from }, botSettings) {
   let processingMsg = null
   try {
-    const brand = botSettings?.brand_name || botSettings?.botname || ''
+    const brand = botSettings?.brand_name || botSettings?.botname || process.env.BUILD_BRAND || ''
 
     processingMsg = await sock.sendMessage(from, {
       text: `[SYSTEM] Intersecting random fact pipelines across cluster records...`
@@ -194,8 +194,6 @@ export default async function animefact(sock, { msg, from }, botSettings) {
         await sock.sendMessage(from, { text: caption }, { quoted: msg })
       }
     }
-
-    // Success message imeondolewa - loading message inabaki
 
   } catch (error) {
     console.error('[ANIMEFACT CORE FAULT]', error.message)
