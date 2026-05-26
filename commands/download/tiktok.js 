@@ -1,0 +1,119 @@
+// commands/download/TikTok.js
+import axios from 'axios'
+
+export const name = 'tiktok'
+export const alias = ['tt', 'ttdl', 'tiktokdl']
+export const category = 'Download'
+export const desc = 'Download TikTok video/photo from link or replied message'
+
+export default async function tiktok(sock, { msg, from, args, quoted }, botSettings) {
+  try {
+    const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
+    const cmdArgs = body.trim().split(' ').slice(1)
+
+    let tiktokUrl = cmdArgs[0]
+
+    // Kama hakuna link kwa args, angalia quoted message
+    if (!tiktokUrl && quoted) {
+      const quotedText = quoted.message?.conversation ||
+                         quoted.message?.extendedTextMessage?.text ||
+                         quoted.message?.imageMessage?.caption ||
+                         quoted.message?.videoMessage?.caption || ''
+      const urlMatch = quotedText.match(/(https?:\/\/[^\s]+)/)
+      if (urlMatch) tiktokUrl = urlMatch[0]
+    }
+
+    // Onyesha usage kama hakuna link
+    if (!tiktokUrl ||!tiktokUrl.includes('tiktok.com')) {
+      await sock.sendMessage(from, { react: { text: '🎵', key: msg.key } })
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ 🎵 *TikTok Downloader* ⌋
+│ Status: Ready
+│
+│ Usage:
+│ ${botSettings.prefix}tt https://tiktok.com/xxx
+│ ${botSettings.prefix}tt [reply to TikTok link]
+│
+│ Note: Bot downloads video/photo without watermark
+╰⊷ *${botSettings.botname}*`
+      }, { quoted: msg })
+    }
+
+    // React loading
+    await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } })
+
+    // Check database
+    if (!botSettings.supabase) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
+    }
+
+    // Get API key from Supabase
+    const { data: apiData } = await botSettings.supabase
+    .from('b_settings')
+    .select('tiktok_api')
+    .eq('id', 'DGIFT_DEFAULT')
+    .maybeSingle()
+
+    if (!apiData?.tiktok_api) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: '> TikTok API key not set in database.' }, { quoted: msg })
+    }
+
+    // Call TikTok API
+    const apiUrl = `https://api.tikmate.app/api/lookup?url=${encodeURIComponent(tiktokUrl)}&key=${apiData.tiktok_api}`
+    const { data } = await axios.get(apiUrl, { timeout: 25000 })
+
+    if (!data?.status ||!data?.data) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: '> Failed to fetch TikTok data. Invalid link or API error.' }, { quoted: msg })
+    }
+
+    const result = data.data
+    const title = result.title || 'TikTok Download'
+    const author = result.author?.nickname || 'Unknown'
+
+    // React success
+    await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
+
+    // Send video if available
+    if (result.video && result.video.length > 0) {
+      const videoUrl = result.video[0]
+      await sock.sendMessage(from, {
+        video: { url: videoUrl },
+        caption: `╭─⌈ 🎵 *TikTok Download* ⌋
+│ Author: ${author}
+│ Title: ${title}
+│ Type: Video
+╰⊷ *${botSettings.botname}*`,
+        quoted: msg
+      })
+      return
+    }
+
+    // Send images if it's a photo post
+    if (result.images && result.images.length > 0) {
+      for (let i = 0; i < result.images.length; i++) {
+        await sock.sendMessage(from, {
+          image: { url: result.images[i] },
+          caption: i === 0? `╭─⌈ 📸 *TikTok Photo* ⌋
+│ Author: ${author}
+│ Title: ${title}
+│ Type: Photo
+╰⊷ *${botSettings.botname}*` : '',
+          quoted: i === 0? msg : undefined
+        })
+        await new Promise(r => setTimeout(r, 1200))
+      }
+      return
+    }
+
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+    await sock.sendMessage(from, { text: '> No media found in this TikTok post.' }, { quoted: msg })
+
+  } catch (err) {
+    console.error(`[TIKTOK CMD ERROR]`, err.message)
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+    await sock.sendMessage(from, { text: '> Failed to download. Try again later.' }, { quoted: msg })
+  }
+}
