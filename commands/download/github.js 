@@ -1,0 +1,95 @@
+// commands/download/github.js
+import axios from 'axios'
+
+export const name = 'github'
+export const alias = ['gh', 'gitdl', 'gdl']
+export const category = 'Download'
+export const desc = 'Download GitHub repository as ZIP from link'
+
+export default async function github(sock, { msg, from, args, quoted }, botSettings) {
+  try {
+    const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
+    const cmdArgs = body.trim().split(' ').slice(1)
+
+    let ghUrl = cmdArgs[0]
+
+    // Angalia quoted message kama hakuna link
+    if (!ghUrl && quoted) {
+      const quotedText = quoted.message?.conversation ||
+                         quoted.message?.extendedTextMessage?.text || ''
+      const urlMatch = quotedText.match(/(https?:\/\/[^\s]+)/)
+      if (urlMatch) ghUrl = urlMatch[0]
+    }
+
+    // Usage
+    if (!ghUrl ||!ghUrl.includes('github.com')) {
+      await sock.sendMessage(from, { react: { text: '📦', key: msg.key } })
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ 📦 *GitHub Downloader* ⌋
+│ Status: Ready
+│
+│ Usage:
+│ ${botSettings.prefix}gh https://github.com/user/repo
+│ ${botSettings.prefix}gh [reply to GitHub link]
+│
+│ Note: Downloads main/master branch as ZIP
+╰⊷ *${botSettings.botname}*`
+      }, { quoted: msg })
+    }
+
+    await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } })
+
+    // Safisha URL: toa.git, /tree/branch, /issues, etc
+    const urlParts = ghUrl.replace('.git', '').split('/')
+    const user = urlParts[3]
+    const repo = urlParts[4]
+
+    if (!user ||!repo) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: '> Invalid GitHub URL format.' }, { quoted: msg })
+    }
+
+    // ZIP URL ya main/master branch
+    const zipUrl = `https://github.com/${user}/${repo}/archive/refs/heads/main.zip`
+
+    // Check kama main ipo, kama hapana jaribu master
+    let finalUrl = zipUrl
+    try {
+      await axios.head(zipUrl, { timeout: 10000 })
+    } catch {
+      finalUrl = `https://github.com/${user}/${repo}/archive/refs/heads/master.zip`
+    }
+
+    // Pata repo info kwa ajili ya caption
+    let repoName = `${user}/${repo}`
+    try {
+      const apiUrl = `https://api.github.com/repos/${user}/${repo}`
+      const { data } = await axios.get(apiUrl, {
+        timeout: 10000,
+        headers: { 'User-Agent': 'WhatsApp-Bot' }
+      })
+      repoName = data.full_name
+    } catch {
+      // ignore kama API ishindi, sio muhimu
+    }
+
+    await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
+
+    // Tuma ZIP file
+    await sock.sendMessage(from, {
+      document: { url: finalUrl },
+      fileName: `${repo}.zip`,
+      mimetype: 'application/zip',
+      caption: `╭─⌈ 📦 *GitHub Download* ⌋
+│ Repo: ${repoName}
+│ Branch: main/master
+│ Type: ZIP Archive
+╰⊷ *${botSettings.botname}*`
+    }, { quoted: msg })
+
+  } catch (err) {
+    console.error(`[GITHUB CMD ERROR]`, err.message)
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+    await sock.sendMessage(from, { text: '> Failed to download. Repo may be private or deleted.' }, { quoted: msg })
+  }
+}
