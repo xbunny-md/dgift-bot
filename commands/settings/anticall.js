@@ -4,7 +4,7 @@ export const alias = ['blockcall', 'nocall']
 export const category = 'Settings'
 export const desc = 'Toggle anti call on/off'
 
-export default async function anticall(sock, { msg, from, sender, isGroup, isAdmin }, botSettings) {
+export default async function anticall(sock, { msg, from, sender }, botSettings) {
   try {
     if (!botSettings.supabase) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
@@ -20,13 +20,13 @@ export default async function anticall(sock, { msg, from, sender, isGroup, isAdm
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
 
-    const targetJid = 'DGIFT_DEFAULT' // anticall ni global tu, kama observer yako
+    const targetJid = 'DGIFT_DEFAULT' // anticall is global only
 
     const { data: settings } = await botSettings.supabase
-     .from('b_settings')
-     .select('anticall')
-     .eq('id', targetJid)
-     .maybeSingle()
+    .from('b_settings')
+    .select('anticall')
+    .eq('id', targetJid)
+    .maybeSingle()
 
     const currentValue = settings?.anticall || false
 
@@ -50,8 +50,8 @@ export default async function anticall(sock, { msg, from, sender, isGroup, isAdm
     }
 
     const { error } = await botSettings.supabase
-     .from('b_settings')
-     .upsert(
+    .from('b_settings')
+    .upsert(
         {
           id: targetJid,
           anticall: newValue,
