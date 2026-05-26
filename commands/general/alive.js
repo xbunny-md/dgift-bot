@@ -44,11 +44,9 @@ export default async function alive(sock, { msg, from }, botSettings) {
         caption: caption
       }, { quoted: msg })
 
+      // Delete processing message instead of editing to success
       if (processingMsg) {
-        await sock.sendMessage(from, {
-          text: `[SUCCESS] Instance status telemetry broadcasted safely.`,
-          edit: processingMsg.key
-        }).catch(() => {})
+        await sock.sendMessage(from, { delete: processingMsg.key }).catch(() => {})
       }
     } catch (imgErr) {
       console.log('[ALIVE] Image failed, sending text only:', imgErr.message)
