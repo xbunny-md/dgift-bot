@@ -11,13 +11,6 @@ export default async function autoread(sock, { msg, from, sender }, botSettings)
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
     }
 
-    // Ruhusu owner pekee
-    const isOwner = sender === botSettings.owner_number + '@s.whatsapp.net'
-    if (!isOwner) {
-      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-      return await sock.sendMessage(from, { text: '> Owner only command.' }, { quoted: msg })
-    }
-
     const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
@@ -26,10 +19,10 @@ export default async function autoread(sock, { msg, from, sender }, botSettings)
 
     // Chukua status ya sasa
     const { data: settings } = await botSettings.supabase
-  .from('b_settings')
-  .select('autoread')
-  .eq('id', targetJid)
-  .maybeSingle()
+ .from('b_settings')
+ .select('autoread')
+ .eq('id', targetJid)
+ .maybeSingle()
 
     const currentValue = settings?.autoread || false
 
@@ -66,8 +59,8 @@ export default async function autoread(sock, { msg, from, sender }, botSettings)
 
     // Sasisha database
     const { error } = await botSettings.supabase
-  .from('b_settings')
-  .upsert(
+ .from('b_settings')
+ .upsert(
         {
           id: targetJid,
           autoread: newValue,
