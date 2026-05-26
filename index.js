@@ -26,7 +26,7 @@ function fixDirectoryCaseSensitivity(dirPath) {
     items.forEach(item => {
       const fullPath = join(dirPath, item)
       const lowerItem = item.toLowerCase()
-      
+
       // Handle cache.js / chache.js diagnostic reporting
       if (lowerItem === 'chache.js') {
         console.log(`⚠️ INFO: Found non-standard spelling '${item}' in directory: ${dirPath}`)
@@ -296,7 +296,8 @@ async function connectToWhatsApp() {
         io.emit('status', 'Connected')
         console.log('✅ Realtime communication matrix with WhatsApp successfully stabilized!')
 
-        botSettings = await getBotSettings()
+        const settingsData = await getBotSettings()
+        botSettings = { ...settingsData, supabase } // <-- FIX HAPA
         console.log('🔄 Fresh system configs fetched successfully. Core Prefix:', botSettings.prefix)
 
         await syncSessionToCloud(true) 
@@ -419,7 +420,8 @@ async function sendConfirmationMessage() {
 async function startBot() {
   try {
     await initializeRouter()
-    botSettings = await getBotSettings()
+    const settingsData = await getBotSettings()
+    botSettings = { ...settingsData, supabase } // <-- FIX HAPA PIA
     if (!botSettings) {
       console.error('❌ Failed to configure system application settings data arrays')
       process.exit(1)
@@ -427,7 +429,7 @@ async function startBot() {
     console.log('✅ Application core state arrays mapped. Execution operational prefix:', botSettings.prefix)
 
     listenSettingsUpdates((newSettings) => {
-      botSettings = newSettings
+      botSettings = { ...newSettings, supabase } // <-- FIX HAPA PIA
       console.log('🔥 Live database modification sync event intercepted. Active Prefix:', newSettings.prefix)
     })
 
