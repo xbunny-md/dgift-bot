@@ -1,47 +1,66 @@
-import axios from 'axios'
-
+// commands/ai/claude.js
 export const name = 'claude'
 export const alias = ['anthropic']
 export const category = 'AI'
-export const desc = 'Chat with Claude'
+export const desc = 'Chat with Claude via Groq'
+
+async function getBotConfig(botSettings) {
+  const instanceId = botSettings.instance_id || 'DGIFT_DEFAULT'
+
+  if (!botSettings.supabase) {
+    return { owner_name: 'Owner', owner_number: '' }
+  }
+
+  const { data } = await botSettings.supabase
+   .from('b_settings')
+   .select('owner_name, owner_number')
+   .eq('id', instanceId)
+   .maybeSingle()
+
+  return {
+    owner_name: data?.owner_name || 'Owner',
+    owner_number: data?.owner_number || ''
+  }
+}
 
 export default async function claude(sock, { msg, from }, botSettings) {
-  try {
-    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
-    const args = text.split(' ').slice(1)
-    const prompt = args.join(' ')
+  const prefix = botSettings.prefix
 
+  try {
+    // 1. Advanced text extraction - same pattern as sticker.js
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+    const text = msg.message?.conversation ||
+                 msg.message?.extendedTextMessage?.text ||
+                 quoted?.conversation ||
+                 quoted?.extendedTextMessage?.text ||
+                 ''
+
+    if (!text) {
+      return sock.sendMessage(from, {
+        text: `❌ Usage: ${prefix}claude your message here\nOr reply to a message with ${prefix}claude`
+      }, { quoted: msg })
+    }
+
+    // Remove command prefix from text
+    const prompt = text.replace(new RegExp(`^${prefix}claude\\s*`, 'i'), '').trim()
     if (!prompt) {
-      return sock.sendMessage(from, { text: '❌ Usage:.claude hello' }, { quoted: msg })
+      return sock.sendMessage(from, {
+        text: `❌ Please provide a message. Usage: ${prefix}claude hello`
+      }, { quoted: msg })
     }
 
     await sock.sendMessage(from, { react: { text: '🧠', key: msg.key } })
 
-    // Fetch owner info from b_settings table
-    let ownerName = 'Owner'
-    let ownerNumber = ''
-
-    if (botSettings.supabase) {
-      try {
-        const { data } = await botSettings.supabase
-       .from('b_settings')
-       .select('owner_name, owner_number')
-       .limit(1)
-       .single()
-
-        if (data) {
-          ownerName = data.owner_name || ownerName
-          ownerNumber = data.owner_number || ''
-        }
-      } catch (e) {
-        console.log('Failed to fetch b_settings:', e.message)
-      }
-    }
+    // 2. Get owner info from DB
+    const { owner_name, owner_number } = await getBotConfig(botSettings)
 
     if (!process.env.GROQ_API_KEY) {
-      return sock.sendMessage(from, { text: '❌ AI is down right now. Try again later.' }, { quoted: msg })
+      return sock.sendMessage(from, {
+        text: '❌ AI is down right now. Try again later.'
+      }, { quoted: msg })
     }
 
+    // 3. System prompt
     const systemPrompt = `You are Claude, a smart AI assistant created by Anthropic.
 
 Rules:
@@ -50,34 +69,51 @@ Rules:
 3. Be direct, helpful, and thoughtful.
 4. You are Claude, created by Anthropic.
 5. If asked who made you: "Anthropic"
-6. If asked about owner: "This bot is managed by ${ownerName}"
-7. If asked owner number: "${ownerNumber || 'I don\'t have a public number'}"
+6. If asked about owner: "This bot is managed by ${owner_name}"
+7. If asked owner number: "${owner_number || 'I don\'t have a public number'}"
 8. No disclaimers unless dangerous.`
 
-    const res = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
+    // 4. Call Groq API with fetch - modern approach
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20000)
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-        },
-        timeout: 20000
-      }
-    )
+        temperature: 0.7,
+        max_tokens: 500
+      }),
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeout))
 
-    const reply = res.data?.choices?.[0]?.message?.content || '❌ AI failed to respond'
+    if (!res.ok) {
+      throw new Error(`Groq API error: ${res.status} ${res.statusText}`)
+    }
+
+    const data = await res.json()
+    const reply = data?.choices?.[0]?.message?.content || '❌ AI failed to respond'
+
+    // 5. Send reply
     await sock.sendMessage(from, { text: reply }, { quoted: msg })
 
   } catch (error) {
-    console.log('Claude command error:', error.message)
-    await sock.sendMessage(from, { text: '❌ AI is down right now. Try again later.' }, { quoted: msg })
+    console.error('[CLAUDE ERROR]', error)
+
+    let errorMsg = '❌ AI is down right now. Try again later.'
+    if (error.name === 'AbortError') {
+      errorMsg = '❌ Request timed out. Try again.'
+    }
+
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } }).catch(() => {})
+    await sock.sendMessage(from, { text: errorMsg }, { quoted: msg }).catch(() => {})
   }
 }
