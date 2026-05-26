@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-export const name = 'dgift'
-export const alias = ['dgiftai']
+export const name = 'dgiftai'
+export const alias = ['dgift']
 export const category = 'AI'
 export const desc = 'Chat with Dgift AI'
 
