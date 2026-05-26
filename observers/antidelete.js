@@ -5,6 +5,39 @@ const messageCache = new Map()
 const CACHE_LIMIT = 500
 const AUTO_CLEAN_DAYS = 7
 
+async function getGroupSettings(botSettings, targetId) {
+  if (!botSettings?.supabase) return null
+
+  // Jaribu kupata settings za group/groupId
+  const { data: groupSettings } = await botSettings.supabase
+   .from('b_settings')
+   .select('*')
+   .eq('id', targetId)
+   .maybeSingle()
+
+  if (groupSettings?.antidelete) return groupSettings
+
+  // Kama hakuna, angalia global settings DGIFT_DEFAULT
+  const { data: globalSettings } = await botSettings.supabase
+   .from('b_settings')
+   .select('*')
+   .eq('id', 'DGIFT_DEFAULT')
+   .maybeSingle()
+
+  return globalSettings
+}
+
+async function getBrandName(botSettings) {
+  if (!botSettings?.supabase) return 'Bot'
+  const instanceId = botSettings.instance_id || 'DGIFT_DEFAULT'
+  const { data } = await botSettings.supabase
+   .from('b_settings')
+   .select('brand_name, botname')
+   .eq('id', instanceId)
+   .maybeSingle()
+  return data?.brand_name || data?.botname || 'Bot'
+}
+
 export default async function antidelete(sock, { msg, from, sender, isGroup, isBotAdmin }, botSettings) {
   try {
     const botJid = sock.user?.id
@@ -16,35 +49,12 @@ export default async function antidelete(sock, { msg, from, sender, isGroup, isB
       const deletedMsg = messageCache.get(deletedKey.id)
       if (!deletedMsg) return
 
-      if (!botSettings?.supabase) return
-
       const groupJid = deletedMsg.key.remoteJid
       const isGroupMsg = groupJid.endsWith('@g.us')
       const targetJid = isGroupMsg? groupJid : 'global'
 
       // 2. CHECK SETTINGS FROM b_settings - NO HARDCODE
-      let settings = botSettings
-
-      if (!settings ||!settings.antidelete) {
-        const { data: dbSettings } = await botSettings.supabase
-        .from('b_settings')
-        .select('*')
-        .eq('id', targetJid)
-        .maybeSingle()
-
-        settings = dbSettings || botSettings
-
-        // If still no group setting, check global
-        if ((!settings ||!settings.antidelete) && isGroupMsg) {
-          const { data: globalSettings } = await botSettings.supabase
-          .from('b_settings')
-          .select('*')
-          .eq('id', 'DGIFT_DEFAULT')
-          .maybeSingle()
-          settings = globalSettings
-        }
-      }
-
+      const settings = await getGroupSettings(botSettings, targetJid)
       if (!settings?.antidelete) return
 
       // 3. EXTRACT DATA
@@ -91,13 +101,13 @@ export default async function antidelete(sock, { msg, from, sender, isGroup, isB
 
       // Auto clean old records
       await botSettings.supabase
-      .from('deleted_messages')
-      .delete()
-      .lt('deleted_at', new Date(Date.now() - AUTO_CLEAN_DAYS * 86400000).toISOString())
+       .from('deleted_messages')
+       .delete()
+       .lt('deleted_at', new Date(Date.now() - AUTO_CLEAN_DAYS * 86400000).toISOString())
 
       // 6. BUILD RECOVERY MESSAGE - USE b_settings DATA
-      const brandName = settings.brand_name || settings.botname || 'Bot'
-      const botName = settings.botname || 'dgift-bot'
+      const brandName = await getBrandName(botSettings)
+      const botName = settings.botname || brandName
 
       let recoveryText = `╭─⌈ 🗑️ *${brandName} AntiDelete* ⌋\n`
       recoveryText += `│ Bot: ${botName}\n`
