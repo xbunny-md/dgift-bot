@@ -1,4 +1,3 @@
-// commands/tools/reveal.js
 export const name = 'reveal'
 export const alias = ['vv', 'viewonce', 'unviewonce']
 export const category = 'Tools'
@@ -11,31 +10,58 @@ export default async function reveal(sock, { msg, from }, botSettings) {
     await sock.sendMessage(from, { react: { text: '👀', key: msg.key } }).catch(() => {})
 
     const quoted = msg.message?.extendedTextMessage?.contextInfo
-    const quotedMsg = quoted?.quotedMessage
-
-    if (!quotedMsg) {
+    if (!quoted ||!quoted.quotedMessage) {
       return await sock.sendMessage(from, {
         text: '> Reply to a viewonce message to reveal it'
       }, { quoted: msg })
     }
 
-    // Check if it's viewonce
-    const isViewOnce = quotedMsg.viewOnceMessage?.message ||
-                       quotedMsg.viewOnceMessageV2?.message ||
-                       quotedMsg.viewOnceMessageV2Extension?.message
+    let quotedMsg = quoted.quotedMessage
+    let messageKey = quoted.stanzaId? { remoteJid: from, id: quoted.stanzaId, fromMe: quoted.participant? quoted.participant.includes(sock.user.id.split(':')[0]) : false } : null
 
-    if (!isViewOnce) {
+    // Force load original message if wrapper is stripped
+    let actualMsg = null
+
+    // Check direct viewonce first
+    if (quotedMsg.viewOnceMessage?.message) {
+      actualMsg = quotedMsg.viewOnceMessage.message
+    } else if (quotedMsg.viewOnceMessageV2?.message) {
+      actualMsg = quotedMsg.viewOnceMessageV2.message
+    } else if (quotedMsg.viewOnceMessageV2Extension?.message) {
+      actualMsg = quotedMsg.viewOnceMessageV2Extension.message
+    }
+
+    // If not found, try loading from server - this works for your own messages
+    if (!actualMsg && messageKey) {
+      try {
+        const loadedMsg = await sock.loadMessage(from, quoted.stanzaId)
+        if (loadedMsg?.message) {
+          if (loadedMsg.message.viewOnceMessage?.message) {
+            actualMsg = loadedMsg.message.viewOnceMessage.message
+          } else if (loadedMsg.message.viewOnceMessageV2?.message) {
+            actualMsg = loadedMsg.message.viewOnceMessageV2.message
+          } else if (loadedMsg.message.viewOnceMessageV2Extension?.message) {
+            actualMsg = loadedMsg.message.viewOnceMessageV2Extension.message
+          }
+        }
+      } catch (e) {
+        console.log('[REVEAL] Load message failed:', e.message)
+      }
+    }
+
+    if (!actualMsg) {
       return await sock.sendMessage(from, {
-        text: '> That message is not a viewonce'
+        text: '> That message is not a viewonce or it has expired'
       }, { quoted: msg })
     }
 
-    const actualMsg = isViewOnce
     const msgType = Object.keys(actualMsg)[0]
     const mediaMsg = actualMsg[msgType]
 
     // Download media
     const stream = await sock.downloadMediaMessage({ message: actualMsg })
+    if (!stream) throw new Error('DOWNLOAD_FAILED')
+
     const chunks = []
     for await (const chunk of stream) chunks.push(chunk)
     const buffer = Buffer.concat(chunks)
@@ -48,7 +74,6 @@ export default async function reveal(sock, { msg, from }, botSettings) {
     let caption = `╭─⌈ 👀 *VIEWONCE REVEALED* ⌋
 ╰⊷ *${brandName}*`
 
-    // Send based on type
     if (msgType === 'imageMessage') {
       sendOptions = {
         image: buffer,
@@ -82,15 +107,12 @@ export default async function reveal(sock, { msg, from }, botSettings) {
 
   } catch (error) {
     console.error('[REVEAL ERROR]', error.message)
-
     let errorMsg = '> Failed to reveal viewonce'
-
     if (error.message === 'DOWNLOAD_FAILED') {
-      errorMsg = '> Failed to download media'
+      errorMsg = '> Failed to download media. It may be expired'
     } else if (error.message === 'UNSUPPORTED_TYPE') {
       errorMsg = '> This media type is not supported'
     }
-
     await sock.sendMessage(from, { text: errorMsg }, { quoted: msg }).catch(() => {})
     await sock.sendMessage(from, { react: { text: '❌', key: msg.key } }).catch(() => {})
   }
