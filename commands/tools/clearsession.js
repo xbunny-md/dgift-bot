@@ -1,6 +1,6 @@
 // commands/tools/clearsessions.js
 import fs from 'fs'
-import { supabase } from '../../index.js'
+import { supabase } from '../../index.js' // tumia index.js kama ulivyosema
 
 export const name = 'clearsessions'
 export const alias = ['clearsession', 'delsession', 'resetsession']
@@ -50,10 +50,9 @@ export default async function clearsessions(sock, { msg, from, sender }, botSett
       .eq('id', 'full_session')
 
     if (error) throw error
-
     console.log('[CLEARSESSION] Supabase session deleted')
 
-    // 3. Update loading message to success
+    // 3. Success message
     await sock.sendMessage(from, {
       text: `╭─⌈ ✅ *SESSION CLEARED* ⌋
 │
@@ -77,9 +76,8 @@ export default async function clearsessions(sock, { msg, from, sender }, botSett
 
   } catch (error) {
     console.error('[CLEARSESSIONS ERROR]', error.message)
-
     const brand = botSettings?.brand_name || botSettings?.botname || 'DGIFT BOT'
-    
+
     if (loadingMsg) {
       await sock.sendMessage(from, {
         text: `╭─⌈ ❌ *ERROR* ⌋
