@@ -4,12 +4,14 @@ export const alias = ['antistatus', 'nostatusmention']
 export const category = 'Settings'
 export const desc = 'Toggle status mention blocker on/off'
 
-export default async function antistatusmention(sock, { msg, from, sender, isGroup }, botSettings) {
+export default async function antistatusmention(sock, { msg, from, sender }, botSettings) {
   try {
+    // Angalia kama database ipo
     if (!botSettings.supabase) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
     }
 
+    // Ruhusu owner pekee
     const isOwner = sender === botSettings.owner_number + '@s.whatsapp.net'
     if (!isOwner) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
@@ -19,10 +21,10 @@ export default async function antistatusmention(sock, { msg, from, sender, isGro
     const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
-    const mode = args[1]?.toLowerCase()
 
-    const targetJid = mode === 'group' && isGroup? from : 'DGIFT_DEFAULT'
+    const targetJid = 'DGIFT_DEFAULT' // global setting tu
 
+    // Chukua status ya sasa
     const { data: settings } = await botSettings.supabase
    .from('b_settings')
    .select('antistatusmention')
@@ -31,21 +33,32 @@ export default async function antistatusmention(sock, { msg, from, sender, isGro
 
     const currentValue = settings?.antistatusmention || false
 
+    // Onyesha status kama hakuna action
     if (!action) {
       await sock.sendMessage(from, { react: { text: '🚫', key: msg.key } })
       return await sock.sendMessage(from, {
         text: `╭─⌈ 🚫 *AntiStatusMention* ⌋
 │ Status: ${currentValue? 'ON ✅' : 'OFF ❌'}
-│ Target: ${targetJid === 'DGIFT_DEFAULT'? 'Global' : 'Group'}
+│ Target: Global
 │
 │ Usage:
-│ ${botSettings.prefix}antistatusmention on global
-│ ${botSettings.prefix}antistatusmention off group
+│ ${botSettings.prefix}antistatusmention on
+│ ${botSettings.prefix}antistatusmention off
+│
+│ Note: Blocks users from mentioning the bot in statuses
 ╰⊷ *${botSettings.botname}*`
       }, { quoted: msg })
     }
 
     const newValue = ['on', 'enable', '1'].includes(action)
+
+    // Angalia kama tayari iko hivyo
+    if (newValue === currentValue) {
+      await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
+      return await sock.sendMessage(from, { text: `> AntiStatusMention is already ${action}` }, { quoted: msg })
+    }
+
+    // Sasisha database
     const { error } = await botSettings.supabase
    .from('b_settings')
    .upsert({
@@ -59,11 +72,16 @@ export default async function antistatusmention(sock, { msg, from, sender, isGro
       return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
     }
 
+    // Sasisha live memory
+    botSettings.antistatusmention = newValue
+
     await sock.sendMessage(from, { react: { text: newValue? '✅' : '❌', key: msg.key } })
     await sock.sendMessage(from, {
       text: `╭─⌈ 🚫 *Settings Updated* ⌋
-│ Status: ${newValue? 'ON ✅' : 'OFF ❌'}
-│ Target: ${targetJid === 'DGIFT_DEFAULT'? 'Global' : 'Group'}
+│ AntiStatusMention: ${newValue? 'ON ✅' : 'OFF ❌'}
+│ Target: Global
+│
+│ ${newValue? 'Bot mentions in statuses will be blocked.' : 'Status mentions are now allowed.'}
 ╰⊷ *${botSettings.botname}*`
     }, { quoted: msg })
 
