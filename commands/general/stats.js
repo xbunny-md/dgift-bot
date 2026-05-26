@@ -1,6 +1,42 @@
 // commands/general/stats.js
 import os from 'os'
-import { getAllCommands } from '../../lib/router.js'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+async function countCommands() {
+  const commandsDir = path.join(__dirname, '../../commands')
+  let cmdCount = 0
+  const categories = new Set()
+
+  if (!fs.existsSync(commandsDir)) return { cmdCount: 0, catCount: 0 }
+
+  try {
+    const folders = fs.readdirSync(commandsDir)
+    
+    for (const folder of folders) {
+      const folderPath = path.join(commandsDir, folder)
+      if (!fs.statSync(folderPath).isDirectory()) continue
+
+      try {
+        const files = fs.readdirSync(folderPath).filter(f => f.endsWith('.js'))
+        if (files.length > 0) {
+          categories.add(folder.toUpperCase())
+          cmdCount += files.length
+        }
+      } catch {
+        continue
+      }
+    }
+  } catch {
+    return { cmdCount: 0, catCount: 0 }
+  }
+
+  return { cmdCount, catCount: categories.size }
+}
 
 export const name = 'stats'
 export const alias = ['status', 'botinfo', 'info']
@@ -24,26 +60,20 @@ export default async function stats(sock, { msg, from, pushName, sender }, botSe
     const mem = process.memoryUsage()
     const ramUsed = (mem.heapUsed / 1024 / 1024).toFixed(1)
     const ramTotal = (mem.heapTotal / 1024 / 1024).toFixed(1)
-    
+
     const sysTotal = (os.totalmem() / 1024 / 1024 / 1024).toFixed(1)
     const sysFree = (os.freem() / 1024 / 1024 / 1024).toFixed(1)
     const sysUsedPercent = Math.round(((os.totalmem() - os.freem()) / os.totalmem()) * 100)
     const ramBar = '█'.repeat(Math.round((sysUsedPercent / 100) * 10)) + '▒'.repeat(10 - Math.round((sysUsedPercent / 100) * 10))
 
-    // Commands from router
-    const allCommands = getAllCommands()
-    const cmdCount = allCommands.size
-    const categories = new Set()
-    
-    for (const [cmdName, cmdData] of allCommands) {
-      categories.add(cmdData.category || 'Other')
-    }
+    // Commands from filesystem
+    const { cmdCount, catCount } = await countCommands()
 
     // System info
-    const botName = botSettings.botname || 'DGIFT BOT'
-    const ownerName = botSettings.owner_name || 'Owner'
-    const brandName = botSettings.brand_name || ownerName
-    const prefix = botSettings.prefix || '.'
+    const botName = botSettings?.botname || 'DGIFT BOT'
+    const ownerName = botSettings?.owner_name || 'Owner'
+    const brandName = botSettings?.brand_name || ownerName
+    const prefix = botSettings?.prefix || '.'
     const platform = os.platform() === 'linux' ? '🐧 Linux' : os.platform() === 'win32' ? '🪟 Windows' : '🍎 MacOS'
     const nodeVer = process.version
     const userIdentity = pushName || sender.split('@')[0]
@@ -57,7 +87,7 @@ export default async function stats(sock, { msg, from, pushName, sender }, botSe
 │ Prefix: [ ${prefix} ]
 │
 │ Commands: ${cmdCount}
-│ Categories: ${categories.size}
+│ Categories: ${catCount}
 │ Platform: ${platform}
 │ Node: ${nodeVer}
 │
