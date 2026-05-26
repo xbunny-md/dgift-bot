@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-)
-
+// commands/settings/setprefix.js
 export const name = 'setprefix'
 export const alias = ['prefix', 'changeprefix']
 export const category = 'Settings'
@@ -12,6 +6,10 @@ export const desc = 'Change bot prefix'
 
 export default async function setprefix(sock, { msg, from, sender, isGroup, isAdmin }, botSettings) {
   try {
+    if (!botSettings.supabase) {
+      return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
+    }
+
     const isOwner = sender === botSettings.owner_number + '@s.whatsapp.net'
     if (!isOwner) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
@@ -22,11 +20,11 @@ export default async function setprefix(sock, { msg, from, sender, isGroup, isAd
     const args = body.trim().split(' ').slice(1)
     const newPrefix = args[0]
 
-    const { data: settings } = await supabase
-    .from('b_settings')
-    .select('prefix, botname, brand_name')
-    .eq('id', 'DGIFT_DEFAULT')
-    .maybeSingle()
+    const { data: settings } = await botSettings.supabase
+  .from('b_settings')
+  .select('prefix, botname, brand_name')
+  .eq('id', 'DGIFT_DEFAULT')
+  .maybeSingle()
 
     const currentPrefix = settings?.prefix || '.'
     const botname = settings?.botname || 'Bot'
@@ -58,13 +56,13 @@ export default async function setprefix(sock, { msg, from, sender, isGroup, isAd
       return await sock.sendMessage(from, { text: `> Prefix is already set to "${currentPrefix}"` }, { quoted: msg })
     }
 
-    const { error } = await supabase
-    .from('b_settings')
-    .update({
+    const { error } = await botSettings.supabase
+  .from('b_settings')
+  .update({
         prefix: newPrefix,
         updated_at: new Date().toISOString()
-      })
-    .eq('id', 'DGIFT_DEFAULT')
+     })
+  .eq('id', 'DGIFT_DEFAULT')
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
