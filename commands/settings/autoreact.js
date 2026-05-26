@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-)
-
+// commands/settings/autoreact.js
 export const name = 'autoreact'
 export const alias = ['reacton', 'autorc']
 export const category = 'Settings'
@@ -12,6 +6,10 @@ export const desc = 'Toggle auto reaction on/off'
 
 export default async function autoreact(sock, { msg, from, sender, isGroup, isAdmin }, botSettings) {
   try {
+    if (!botSettings.supabase) {
+      return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
+    }
+
     const isOwner = sender === botSettings.owner_number + '@s.whatsapp.net'
     if (!isOwner && (!isGroup ||!isAdmin)) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
@@ -25,11 +23,11 @@ export default async function autoreact(sock, { msg, from, sender, isGroup, isAd
 
     const targetJid = mode === 'group' && isGroup? from : 'DGIFT_DEFAULT'
 
-    const { data: settings } = await supabase
-     .from('b_settings')
-     .select('autoreact')
-     .eq('id', targetJid)
-     .maybeSingle()
+    const { data: settings } = await botSettings.supabase
+  .from('b_settings')
+  .select('autoreact')
+  .eq('id', targetJid)
+  .maybeSingle()
 
     const currentValue = settings?.autoreact || false
 
@@ -53,16 +51,16 @@ export default async function autoreact(sock, { msg, from, sender, isGroup, isAd
       return await sock.sendMessage(from, { text: `> AutoReact is already ${action}` }, { quoted: msg })
     }
 
-    const { error } = await supabase
-     .from('b_settings')
-     .upsert(
-        {
-          id: targetJid,
-          autoreact: newValue,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'id' }
-      )
+    const { error } = await botSettings.supabase
+  .from('b_settings')
+  .upsert(
+      {
+        id: targetJid,
+        autoreact: newValue,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'id' }
+    )
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
