@@ -37,7 +37,7 @@ export default async function setbotname(sock, { msg, from, sender, isGroup, isA
 │ ${prefix}setbotname Dgift-Bot
 │ ${prefix}setbotname Bunny Tech
 │
-│ Note: Bot name na Brand name zitabadilika zote
+│ Note: Both bot name and brand name will be updated
 ╰⊷ *${currentName}*`
       }, { quoted: msg })
     }
@@ -49,7 +49,7 @@ export default async function setbotname(sock, { msg, from, sender, isGroup, isA
 
     if (newName === currentName) {
       await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
-      return await sock.sendMessage(from, { text: `> Bot name already set to "${currentName}"` }, { quoted: msg })
+      return await sock.sendMessage(from, { text: `> Bot name is already set to "${currentName}"` }, { quoted: msg })
     }
 
     const { error } = await supabase
@@ -74,7 +74,7 @@ export default async function setbotname(sock, { msg, from, sender, isGroup, isA
 │ Brand: ${newName}
 │ Status: Applied instantly
 │
-│ All messages will use new name now
+│ All messages will use the new name now
 ╰⊷ *${newName}*`
     }, { quoted: msg })
 
