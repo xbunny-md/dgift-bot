@@ -1,11 +1,11 @@
-import { supabase } from '../lib/supabase.js'
-
-export default async function antistatusmention(sock, { msg }) {
+// observers/antistatusmention.js
+export default async function antistatusmention(sock, { msg }, botSettings) {
   try {
+    if (!botSettings?.supabase) return
     if (!msg.key.fromMe) return
     if (!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid) return
 
-    const { data: settings } = await supabase
+    const { data: settings } = await botSettings.supabase
       .from('b_settings')
       .select('antistatusmention')
       .eq('id', 'DGIFT_DEFAULT')
