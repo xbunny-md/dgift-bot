@@ -4,12 +4,14 @@ export const alias = ['botname', 'setname', 'changename']
 export const category = 'Settings'
 export const desc = 'Change bot name and brand name'
 
-export default async function setbotname(sock, { msg, from, sender, isGroup, isAdmin }, botSettings) {
+export default async function setbotname(sock, { msg, from, sender }, botSettings) {
   try {
+    // Angalia kama database ipo
     if (!botSettings.supabase) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
     }
 
+    // Ruhusu owner pekee
     const isOwner = sender === botSettings.owner_number + '@s.whatsapp.net'
     if (!isOwner) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
@@ -20,15 +22,17 @@ export default async function setbotname(sock, { msg, from, sender, isGroup, isA
     const args = body.trim().split(' ').slice(1)
     const newName = args.join(' ').trim()
 
+    // Chukua settings za sasa
     const { data: settings } = await botSettings.supabase
-     .from('b_settings')
-     .select('botname, brand_name, prefix')
-     .eq('id', 'DGIFT_DEFAULT')
-     .maybeSingle()
+    .from('b_settings')
+    .select('botname, brand_name, prefix')
+    .eq('id', 'DGIFT_DEFAULT')
+    .maybeSingle()
 
     const currentName = settings?.botname || 'dgift-bot'
     const prefix = settings?.prefix || '.'
 
+    // Onyesha status kama hakuna jina jipya
     if (!newName) {
       await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } })
       return await sock.sendMessage(from, {
@@ -45,31 +49,34 @@ export default async function setbotname(sock, { msg, from, sender, isGroup, isA
       }, { quoted: msg })
     }
 
+    // Hakikisha jina sio refu sana
     if (newName.length > 30) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
       return await sock.sendMessage(from, { text: '> Name too long. Max 30 characters.' }, { quoted: msg })
     }
 
+    // Angalia kama jina ni lilelile
     if (newName === currentName) {
       await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
       return await sock.sendMessage(from, { text: `> Bot name is already set to "${currentName}"` }, { quoted: msg })
     }
 
+    // Sasisha database
     const { error } = await botSettings.supabase
-     .from('b_settings')
-     .update({
+    .from('b_settings')
+    .update({
         botname: newName,
         brand_name: newName,
         updated_at: new Date().toISOString()
       })
-     .eq('id', 'DGIFT_DEFAULT')
+    .eq('id', 'DGIFT_DEFAULT')
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
       return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
     }
 
-    // Update live memory pia
+    // Sasisha live memory pia
     botSettings.botname = newName
     botSettings.brand_name = newName
 
