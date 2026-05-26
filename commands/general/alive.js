@@ -25,10 +25,8 @@ export default async function alive(sock, { msg, from }, botSettings) {
     const uptimeString = `${hours}h ${minutes}m ${seconds}s`
     const platformLayer = process.env.RENDER_SERVICE_NAME ? 'Render Cloud' : 'Node.js Engine'
 
-    // Image priority: alive_image > menu_image > fallback
-    const primaryImage = botSettings?.alive_image || botSettings?.menu_image || null
-    const fallbackImage = 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
-    const imageUrl = primaryImage || fallbackImage
+    // Image from ENV
+    const imageUrl = process.env.IMAGE_URL || 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
 
     const caption = `╭─⌈ ⚡ *${activeBotIdentityName.toUpperCase()} IS ALIVE* ⌋
 │
@@ -54,7 +52,7 @@ export default async function alive(sock, { msg, from }, botSettings) {
       }
     } catch (imgErr) {
       console.log('[ALIVE] Image failed, sending text only:', imgErr.message)
-      
+
       if (processingMsg) {
         await sock.sendMessage(from, { text: caption, edit: processingMsg.key })
       } else {
