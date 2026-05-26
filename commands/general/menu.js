@@ -1,78 +1,127 @@
 // commands/general/menu.js
 import os from 'os'
-import { getAllCommands } from '../../lib/router.js'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export const name = 'menu'
-export const alias = ['help','commands']
+export const alias = ['help','commands','cmds']
 export const category = 'General'
-export const desc = 'Displays the complete system interface panel dynamically categorized with server statistic'
+export const desc = 'Displays the complete system interface panel dynamically'
 
-/**
- * Highly Optimized Dynamic Menu Generation Engine
- */
+async function scanCommands() {
+  const commandsDir = path.join(__dirname, '../../commands')
+  const catalog = {}
+
+  if (!fs.existsSync(commandsDir)) return catalog
+
+  try {
+    const categories = fs.readdirSync(commandsDir)
+
+    for (const cat of categories) {
+      const catPath = path.join(commandsDir, cat)
+      if (!fs.statSync(catPath).isDirectory()) continue
+
+      try {
+        const files = fs.readdirSync(catPath).filter(f => f.endsWith('.js'))
+        if (files.length === 0) continue
+
+        const cmdNames = []
+        for (const file of files) {
+          try {
+            const cmdName = file.replace('.js', '')
+            cmdNames.push(cmdName)
+          } catch {
+            continue
+          }
+        }
+
+        if (cmdNames.length > 0) {
+          catalog[cat.toUpperCase()] = cmdNames.sort()
+        }
+      } catch {
+        continue
+      }
+    }
+  } catch {
+    return catalog
+  }
+
+  return catalog
+}
+
 export default async function executeAutonomousCommand(sock, { msg, from, pushName, sender }, botSettings) {
   try {
     await sock.sendMessage(from, { react: { text: '🌀', key: msg.key } })
 
-    const totalUptimeSeconds = process.uptime()
-    const calculationHours = Math.floor(totalUptimeSeconds / 3600)
-    const calculationMinutes = Math.floor((totalUptimeSeconds % 3600) / 60)
-    const calculationSeconds = Math.floor(totalUptimeSeconds % 60)
-    const structuredUptimeString = `${calculationHours}h ${calculationMinutes}m ${calculationSeconds}s`
+    // System stats
+    const totalSeconds = process.uptime()
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = Math.floor(totalSeconds % 60)
+    const uptimeString = `${hours}h ${minutes}m ${seconds}s`
 
-    const totalSystemMemoryBytes = os.totalmem()
-    const freeSystemMemoryBytes = os.freem()
-    const globalMemoryUtilizationRatio = (totalSystemMemoryBytes - freeSystemMemoryBytes) / totalSystemMemoryBytes
-    const dynamicRamProgressBar = '█'.repeat(Math.round(globalMemoryUtilizationRatio * 10)) + '▒'.repeat(10 - Math.round(globalMemoryUtilizationRatio * 10))
-    const totalRamUtilizationPercentage = Math.round(globalMemoryUtilizationRatio * 100)
+    const totalMem = os.totalmem()
+    const freeMem = os.freem()
+    const usedPercent = Math.round(((totalMem - freeMem) / totalMem) * 100)
+    const ramBar = '█'.repeat(Math.round(usedPercent / 10)) + '▒'.repeat(10 - Math.round(usedPercent / 10))
 
-    const underlyingOperatingPlatform = os.platform() === 'linux'? '🐧 Linux' : '🪟 Windows'
-    const userIdentity = pushName || sender.split('@')[0]
+    const platform = process.env.RENDER_SERVICE_NAME? 'Render Cloud' : os.platform()
+    const user = pushName || sender.split('@')[0]
 
-    // Get commands from router.js - no more fs scanning
-    const allCommands = getAllCommands()
-    const dynamicCommandCatalog = {}
+    // Scan commands from files only
+    const dynamicCommandCatalog = await scanCommands()
 
-    for (const [cmdName, cmdData] of allCommands) {
-      const category = (cmdData.category || 'Uncategorized').toUpperCase()
-      if (!dynamicCommandCatalog[category]) dynamicCommandCatalog[category] = []
-      dynamicCommandCatalog[category].push(cmdName)
-    }
+    const prefix = botSettings?.prefix || '.'
+    const botName = botSettings?.botname || 'DGIFT BOT'
+    const owner = botSettings?.owner_name || 'Owner'
 
-    const systemPrefixToken = botSettings.prefix || '!'
-    const configuredBotName = botSettings.botname || 'DGIFT BOT'
-    const configuredOwnerName = botSettings.owner_name || 'Dgift-Droid'
-    const footerText = '*Powered by Dgift Tech*'
-
-    let primaryConstructedMenuBuffer =
-`╭──⌈ ${configuredBotName} ⌋
-│ User: ${userIdentity}
-│ Owner: ${configuredOwnerName}
-│ Prefix: [ ${systemPrefixToken} ]
-│ Platform: ${underlyingOperatingPlatform}
-│ Uptime: ${structuredUptimeString}
-│ RAM: ${dynamicRamProgressBar} ${totalRamUtilizationPercentage}%
+    // Build menu
+    let menu = `╭──⌈ ${botName} ⌋
+│ User: ${user}
+│ Owner: ${owner}
+│ Prefix: [ ${prefix} ]
+│ Platform: ${platform}
+│ Uptime: ${uptimeString}
+│ RAM: ${ramBar} ${usedPercent}%
 ╰────────────────\n\n`
 
-    for (const cat of Object.keys(dynamicCommandCatalog).sort()) {
-      primaryConstructedMenuBuffer += `╭──⌈ ${cat} ⌋\n`
-      dynamicCommandCatalog[cat].sort().forEach(cmd => {
-        primaryConstructedMenuBuffer += `│ ${systemPrefixToken}${cmd}\n`
+    const cats = Object.keys(dynamicCommandCatalog).sort()
+    for (const cat of cats) {
+      menu += `╭──⌈ ${cat} ⌋\n`
+      dynamicCommandCatalog[cat].forEach(cmd => {
+        menu += `│ ${prefix}${cmd}\n`
       })
-      primaryConstructedMenuBuffer += `╰────────────────\n\n`
+      menu += `╰────────────────\n\n`
     }
 
-    primaryConstructedMenuBuffer += `${footerText}`
+    menu += `*Powered By ${botName}*`
 
-    // Send with ENV image URL
-    const imageUrl = process.env.IMAGE_URL || 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
-    await sock.sendMessage(from, {
-      image: { url: imageUrl },
-      caption: primaryConstructedMenuBuffer
-    }, { quoted: msg })
+    // Send with image from ENV
+    const imageUrl = process.env.IMAGE_URL
 
-  } catch (e) {
-    console.error("Menu Error:", e.message)
-    await sock.sendMessage(from, { text: "Menu failed to load. Try again." }, { quoted: msg })
+    if (imageUrl) {
+      try {
+        await sock.sendMessage(from, {
+          image: { url: imageUrl },
+          caption: menu
+        }, { quoted: msg })
+      } catch (imgErr) {
+        console.log('[MENU] Image failed:', imgErr.message)
+        await sock.sendMessage(from, { text: menu }, { quoted: msg })
+      }
+    } else {
+      await sock.sendMessage(from, { text: menu }, { quoted: msg })
+    }
+
+    await sock.sendMessage(from, { react: { text: '✨', key: msg.key } })
+
+  } catch (error) {
+    console.error('[MENU COMMAND SYSTEM EXCEPTION]', error.message)
+    await sock.sendMessage(from, { text: `[ERROR] Menu generation failed.` }, { quoted: msg })
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
   }
 }
