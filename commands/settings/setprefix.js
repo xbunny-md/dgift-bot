@@ -1,4 +1,9 @@
-import { supabase } from '../../lib/supabase.js'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+)
 
 export const name = 'setprefix'
 export const alias = ['prefix', 'changeprefix']
@@ -18,10 +23,10 @@ export default async function setprefix(sock, { msg, from, sender, isGroup, isAd
     const newPrefix = args[0]
 
     const { data: settings } = await supabase
-     .from('b_settings')
-     .select('prefix, botname, brand_name')
-     .eq('id', 'DGIFT_DEFAULT')
-     .maybeSingle()
+    .from('b_settings')
+    .select('prefix, botname, brand_name')
+    .eq('id', 'DGIFT_DEFAULT')
+    .maybeSingle()
 
     const currentPrefix = settings?.prefix || '.'
     const botname = settings?.botname || 'Bot'
@@ -50,20 +55,20 @@ export default async function setprefix(sock, { msg, from, sender, isGroup, isAd
 
     if (newPrefix === currentPrefix) {
       await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
-      return await sock.sendMessage(from, { text: `> Prefix already set to "${currentPrefix}"` }, { quoted: msg })
+      return await sock.sendMessage(from, { text: `> Prefix is already set to "${currentPrefix}"` }, { quoted: msg })
     }
 
     const { error } = await supabase
-     .from('b_settings')
-     .update({
+    .from('b_settings')
+    .update({
         prefix: newPrefix,
         updated_at: new Date().toISOString()
       })
-     .eq('id', 'DGIFT_DEFAULT')
+    .eq('id', 'DGIFT_DEFAULT')
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-      return await sock.sendMessage(from, { text: '> Database error.' }, { quoted: msg })
+      return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
     }
 
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
