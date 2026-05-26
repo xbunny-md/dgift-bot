@@ -1,119 +1,64 @@
-export const name = 'reveal'
-export const alias = ['vv', 'viewonce', 'unviewonce']
-export const category = 'Tools'
-export const desc = 'Reveal viewonce messages of any type'
+// commands/tools/vv.js
+export const name = 'vv'
+export const alias = ['viewonce', 'unlock', 'retrive', 'rvo']
+export const category = 'Profile'
+export const desc = 'Unlock View Once: Image, Video, Audio'
 
-export default async function reveal(sock, { msg, from }, botSettings) {
+import { downloadContentFromMessage, getContentType } from "@whiskeysockets/baileys"
+
+export default async function vv(sock, { msg, from }, botSettings) {
+  const prefix = botSettings?.prefix || '.'
   const brandName = botSettings?.brand_name || botSettings?.botname || 'Bot'
 
   try {
-    await sock.sendMessage(from, { react: { text: '👀', key: msg.key } }).catch(() => {})
+    await sock.sendMessage(from, { react: { text: '👁️', key: msg.key } }).catch(() => {})
 
-    const quoted = msg.message?.extendedTextMessage?.contextInfo
-    if (!quoted ||!quoted.quotedMessage) {
-      return await sock.sendMessage(from, {
-        text: '> Reply to a viewonce message to reveal it'
-      }, { quoted: msg })
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+    if (!quoted) {
+      await sock.sendMessage(from, { text: '> ❌ Reply to a View Once message' }, { quoted: msg })
+      return
     }
 
-    let quotedMsg = quoted.quotedMessage
-    let messageKey = quoted.stanzaId? { remoteJid: from, id: quoted.stanzaId, fromMe: quoted.participant? quoted.participant.includes(sock.user.id.split(':')[0]) : false } : null
+    // Shika ViewOnce v1 na v2
+    let viewOnce = quoted?.viewOnceMessageV2?.message || quoted?.viewOnceMessage?.message || quoted
+    const type = getContentType(viewOnce)
+    const media = viewOnce[type]
 
-    // Force load original message if wrapper is stripped
-    let actualMsg = null
-
-    // Check direct viewonce first
-    if (quotedMsg.viewOnceMessage?.message) {
-      actualMsg = quotedMsg.viewOnceMessage.message
-    } else if (quotedMsg.viewOnceMessageV2?.message) {
-      actualMsg = quotedMsg.viewOnceMessageV2.message
-    } else if (quotedMsg.viewOnceMessageV2Extension?.message) {
-      actualMsg = quotedMsg.viewOnceMessageV2Extension.message
+    const supportedTypes = ['imageMessage', 'videoMessage', 'audioMessage']
+    if (!type ||!supportedTypes.includes(type) ||!media?.viewOnce) {
+      await sock.sendMessage(from, { text: '> ❌ This is not a View Once message' }, { quoted: msg })
+      return
     }
-
-    // If not found, try loading from server - this works for your own messages
-    if (!actualMsg && messageKey) {
-      try {
-        const loadedMsg = await sock.loadMessage(from, quoted.stanzaId)
-        if (loadedMsg?.message) {
-          if (loadedMsg.message.viewOnceMessage?.message) {
-            actualMsg = loadedMsg.message.viewOnceMessage.message
-          } else if (loadedMsg.message.viewOnceMessageV2?.message) {
-            actualMsg = loadedMsg.message.viewOnceMessageV2.message
-          } else if (loadedMsg.message.viewOnceMessageV2Extension?.message) {
-            actualMsg = loadedMsg.message.viewOnceMessageV2Extension.message
-          }
-        }
-      } catch (e) {
-        console.log('[REVEAL] Load message failed:', e.message)
-      }
-    }
-
-    if (!actualMsg) {
-      return await sock.sendMessage(from, {
-        text: '> That message is not a viewonce or it has expired'
-      }, { quoted: msg })
-    }
-
-    const msgType = Object.keys(actualMsg)[0]
-    const mediaMsg = actualMsg[msgType]
 
     // Download media
-    const stream = await sock.downloadMediaMessage({ message: actualMsg })
-    if (!stream) throw new Error('DOWNLOAD_FAILED')
+    let mediaType = 'image'
+    if (type === 'videoMessage') mediaType = 'video'
+    if (type === 'audioMessage') mediaType = 'audio'
 
-    const chunks = []
-    for await (const chunk of stream) chunks.push(chunk)
-    const buffer = Buffer.concat(chunks)
-
-    if (!buffer || buffer.length === 0) {
-      throw new Error('DOWNLOAD_FAILED')
+    const stream = await downloadContentFromMessage(media, mediaType)
+    let buffer = Buffer.from([])
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk])
     }
 
-    let sendOptions = {}
-    let caption = `╭─⌈ 👀 *VIEWONCE REVEALED* ⌋
+    const caption = `╭─⌈ 👁️ *VIEW ONCE UNLOCKED* ⌋
+│ Type: ${mediaType}
 ╰⊷ *${brandName}*`
 
-    if (msgType === 'imageMessage') {
-      sendOptions = {
-        image: buffer,
-        caption: mediaMsg.caption || caption
-      }
-    } else if (msgType === 'videoMessage') {
-      sendOptions = {
-        video: buffer,
-        caption: mediaMsg.caption || caption,
-        gifPlayback: mediaMsg.gifPlayback || false
-      }
-    } else if (msgType === 'audioMessage') {
-      sendOptions = {
-        audio: buffer,
-        mimetype: mediaMsg.mimetype || 'audio/mp4',
-        ptt: mediaMsg.ptt || false
-      }
-    } else if (msgType === 'documentMessage') {
-      sendOptions = {
-        document: buffer,
-        mimetype: mediaMsg.mimetype,
-        fileName: mediaMsg.fileName || 'file',
-        caption: mediaMsg.caption || ''
-      }
-    } else {
-      throw new Error('UNSUPPORTED_TYPE')
+    // Tuma kulingana na type
+    if (type === 'imageMessage') {
+      await sock.sendMessage(from, { image: buffer, caption }, { quoted: msg })
+    } else if (type === 'videoMessage') {
+      await sock.sendMessage(from, { video: buffer, caption }, { quoted: msg })
+    } else if (type === 'audioMessage') {
+      await sock.sendMessage(from, { audio: buffer, ptt: media.ptt || false }, { quoted: msg })
     }
 
-    await sock.sendMessage(from, sendOptions, { quoted: msg })
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } }).catch(() => {})
 
   } catch (error) {
-    console.error('[REVEAL ERROR]', error.message)
-    let errorMsg = '> Failed to reveal viewonce'
-    if (error.message === 'DOWNLOAD_FAILED') {
-      errorMsg = '> Failed to download media. It may be expired'
-    } else if (error.message === 'UNSUPPORTED_TYPE') {
-      errorMsg = '> This media type is not supported'
-    }
-    await sock.sendMessage(from, { text: errorMsg }, { quoted: msg }).catch(() => {})
+    console.error('[VV ERROR]', error.message)
     await sock.sendMessage(from, { react: { text: '❌', key: msg.key } }).catch(() => {})
+    await sock.sendMessage(from, { text: '> ❌ Failed to unlock. Media might be expired.' }, { quoted: msg })
   }
 }
