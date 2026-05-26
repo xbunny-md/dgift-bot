@@ -1,6 +1,6 @@
 // commands/tools/clearsessions.js
 import fs from 'fs'
-import { supabase } from '../../index.js' // tumia index.js kama ulivyosema
+import { supabase } from '../../index.js'
 
 export const name = 'clearsessions'
 export const alias = ['clearsession', 'delsession', 'resetsession']
@@ -10,19 +10,7 @@ export const desc = 'Delete session folder and Supabase session data. Bot will r
 export default async function clearsessions(sock, { msg, from, sender }, botSettings) {
   let loadingMsg = null
   try {
-    const ownerJid = botSettings.owner_number + '@s.whatsapp.net'
-    const isOwner = sender === ownerJid
     const brand = botSettings?.brand_name || botSettings?.botname || 'DGIFT BOT'
-
-    if (!isOwner) {
-      return sock.sendMessage(from, {
-        text: `╭─⌈ 🔒 *ACCESS DENIED* ⌋
-│
-│ Owner only command
-│
-╰⊷ *Powered By ${brand}*`
-      }, { quoted: msg })
-    }
 
     await sock.sendMessage(from, { react: { text: '🗑️', key: msg.key } })
 
