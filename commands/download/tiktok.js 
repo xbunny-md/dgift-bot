@@ -13,7 +13,7 @@ export default async function tiktok(sock, { msg, from, args, quoted }, botSetti
 
     let tiktokUrl = cmdArgs[0]
 
-    // Kama hakuna link kwa args, angalia quoted message
+    // Angalia quoted message kama hakuna link
     if (!tiktokUrl && quoted) {
       const quotedText = quoted.message?.conversation ||
                          quoted.message?.extendedTextMessage?.text ||
@@ -23,7 +23,7 @@ export default async function tiktok(sock, { msg, from, args, quoted }, botSetti
       if (urlMatch) tiktokUrl = urlMatch[0]
     }
 
-    // Onyesha usage kama hakuna link
+    // Usage
     if (!tiktokUrl ||!tiktokUrl.includes('tiktok.com')) {
       await sock.sendMessage(from, { react: { text: '🎵', key: msg.key } })
       return await sock.sendMessage(from, {
@@ -34,72 +34,63 @@ export default async function tiktok(sock, { msg, from, args, quoted }, botSetti
 │ ${botSettings.prefix}tt https://tiktok.com/xxx
 │ ${botSettings.prefix}tt [reply to TikTok link]
 │
-│ Note: Bot downloads video/photo without watermark
+│ Note: Downloads video/photo without watermark
 ╰⊷ *${botSettings.botname}*`
       }, { quoted: msg })
     }
 
-    // React loading
     await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } })
 
-    // Check database
-    if (!botSettings.supabase) {
-      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-      return await sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
+    // Fix short URL
+    if (tiktokUrl.includes('vm.tiktok.com') || tiktokUrl.includes('vt.tiktok.com')) {
+      const res = await axios.get(tiktokUrl, {
+        maxRedirects: 5,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      })
+      tiktokUrl = res.request.res.responseUrl
     }
 
-    // Get API key from Supabase
-    const { data: apiData } = await botSettings.supabase
-    .from('b_settings')
-    .select('tiktok_api')
-    .eq('id', 'DGIFT_DEFAULT')
-    .maybeSingle()
+    // Fetch HTML
+    const { data: html } = await axios.get(tiktokUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      timeout: 20000
+    })
 
-    if (!apiData?.tiktok_api) {
+    // Extract JSON data
+    const jsonMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/)
+    if (!jsonMatch) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-      return await sock.sendMessage(from, { text: '> TikTok API key not set in database.' }, { quoted: msg })
+      return await sock.sendMessage(from, { text: '> Failed to extract video data. Video may be private.' }, { quoted: msg })
     }
 
-    // Call TikTok API
-    const apiUrl = `https://api.tikmate.app/api/lookup?url=${encodeURIComponent(tiktokUrl)}&key=${apiData.tiktok_api}`
-    const { data } = await axios.get(apiUrl, { timeout: 25000 })
+    const json = JSON.parse(jsonMatch[1])
+    const videoData = json.__DEFAULT_SCOPE__?.['webapp.video-detail']?.itemInfo?.itemStruct
 
-    if (!data?.status ||!data?.data) {
+    if (!videoData) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-      return await sock.sendMessage(from, { text: '> Failed to fetch TikTok data. Invalid link or API error.' }, { quoted: msg })
+      return await sock.sendMessage(from, { text: '> No media found. Video may be private or deleted.' }, { quoted: msg })
     }
 
-    const result = data.data
-    const title = result.title || 'TikTok Download'
-    const author = result.author?.nickname || 'Unknown'
+    const author = videoData.author?.nickname || videoData.author?.uniqueId || 'Unknown'
+    const title = videoData.desc || 'TikTok Download'
 
-    // React success
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
 
-    // Send video if available
-    if (result.video && result.video.length > 0) {
-      const videoUrl = result.video[0]
-      await sock.sendMessage(from, {
-        video: { url: videoUrl },
-        caption: `╭─⌈ 🎵 *TikTok Download* ⌋
-│ Author: ${author}
-│ Title: ${title}
-│ Type: Video
-╰⊷ *${botSettings.botname}*`,
-        quoted: msg
-      })
-      return
-    }
+    // Photo post
+    if (videoData.imagePost && videoData.imagePost.images) {
+      const images = videoData.imagePost.images
+      for (let i = 0; i < images.length; i++) {
+        const imgUrl = images[i].imageURL?.urlList?.[0]
+        if (!imgUrl) continue
 
-    // Send images if it's a photo post
-    if (result.images && result.images.length > 0) {
-      for (let i = 0; i < result.images.length; i++) {
         await sock.sendMessage(from, {
-          image: { url: result.images[i] },
+          image: { url: imgUrl },
           caption: i === 0? `╭─⌈ 📸 *TikTok Photo* ⌋
 │ Author: ${author}
 │ Title: ${title}
-│ Type: Photo
 ╰⊷ *${botSettings.botname}*` : '',
           quoted: i === 0? msg : undefined
         })
@@ -108,12 +99,26 @@ export default async function tiktok(sock, { msg, from, args, quoted }, botSetti
       return
     }
 
-    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-    await sock.sendMessage(from, { text: '> No media found in this TikTok post.' }, { quoted: msg })
+    // Video post
+    const videoUrl = videoData.video?.playAddr?.[0] || videoData.video?.downloadAddr?.[0]
+    if (!videoUrl) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: '> Video URL not found.' }, { quoted: msg })
+    }
+
+    await sock.sendMessage(from, {
+      video: { url: videoUrl },
+      caption: `╭─⌈ 🎵 *TikTok Download* ⌋
+│ Author: ${author}
+│ Title: ${title}
+│ Type: Video
+╰⊷ *${botSettings.botname}*`,
+      quoted: msg
+    })
 
   } catch (err) {
     console.error(`[TIKTOK CMD ERROR]`, err.message)
     await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-    await sock.sendMessage(from, { text: '> Failed to download. Try again later.' }, { quoted: msg })
+    await sock.sendMessage(from, { text: '> Failed to download. Video may be private or TikTok blocked the request.' }, { quoted: msg })
   }
 }
