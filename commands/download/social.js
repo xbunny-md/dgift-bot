@@ -1,246 +1,7 @@
-// commands/download/social.js
-
-import axios from 'axios'
-import fs from 'fs'
-import path from 'path'
-import { pipeline } from 'stream'
-import { promisify } from 'util'
-
-const pipelineAsync = promisify(pipeline)
-
-export const name = 'social'
-export const alias = [
-  'tt',
-  'tiktok',
-  'ig',
-  'instagram',
-  'fb',
-  'facebook',
-  'reel',
-  'reels'
-]
-
-export const category = 'Download'
-export const desc = 'TikTok / Facebook / Instagram Downloader'
-
-const TMP_DIR = './tmp'
-
-if (!fs.existsSync(TMP_DIR)) {
-  fs.mkdirSync(TMP_DIR, { recursive: true })
-}
-
-/*
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-15 ULTRA BACKUP APIS
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-*/
-
-const APIS = [
-
-  // 1
-  async (url) => {
-    const { data } = await axios.get(
-      `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url:
-        data?.data?.play ||
-        data?.data?.wmplay,
-      title:
-        data?.data?.title,
-      thumbnail:
-        data?.data?.cover
-    }
-  },
-
-  // 2
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.agatz.xyz/api/tiktok?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.data?.play,
-      title: data?.data?.title,
-      thumbnail: data?.data?.cover
-    }
-  },
-
-  // 3
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.douxx.tech/api/download/tiktok?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.result?.nowm,
-      title: data?.result?.title,
-      thumbnail: data?.result?.thumbnail
-    }
-  },
-
-  // 4
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.botcahx.eu.org/api/dowloader/tiktok?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.result?.video,
-      title: data?.result?.title,
-      thumbnail: data?.result?.cover
-    }
-  },
-
-  // 5
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.ryzendesu.vip/api/downloader/tiktok?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.url,
-      title: data?.title,
-      thumbnail: data?.thumbnail
-    }
-  },
-
-  // 6
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.akuari.my.id/downloader/tiktok?link=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.respon?.video,
-      title: data?.respon?.title,
-      thumbnail: data?.respon?.cover
-    }
-  },
-
-  // 7
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.agatz.xyz/api/instagram?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.data?.[0],
-      title: 'Instagram Download',
-      thumbnail: data?.thumbnail
-    }
-  },
-
-  // 8
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.douxx.tech/api/download/instagram?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.result?.url,
-      title: 'Instagram Download',
-      thumbnail: data?.result?.thumbnail
-    }
-  },
-
-  // 9
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.botcahx.eu.org/api/dowloader/instagram?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.result?.media?.[0],
-      title: 'Instagram Download',
-      thumbnail: data?.result?.thumbnail
-    }
-  },
-
-  // 10
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.agatz.xyz/api/facebook?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url:
-        data?.data?.hd ||
-        data?.data?.sd,
-      title: data?.data?.title,
-      thumbnail: data?.data?.thumbnail
-    }
-  },
-
-  // 11
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.douxx.tech/api/download/facebook?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.result?.download,
-      title: data?.result?.title,
-      thumbnail: data?.result?.thumbnail
-    }
-  },
-
-  // 12
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.botcahx.eu.org/api/dowloader/fbdown?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url:
-        data?.result?.hd ||
-        data?.result?.sd,
-      title: data?.result?.title,
-      thumbnail: data?.result?.thumbnail
-    }
-  },
-
-  // 13
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.ryzendesu.vip/api/downloader/fb?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.url,
-      title: data?.title,
-      thumbnail: data?.thumbnail
-    }
-  },
-
-  // 14
-  async (url) => {
-    const { data } = await axios.get(
-      `https://api.akuari.my.id/downloader/facebook?link=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.respon?.video,
-      title: data?.respon?.title,
-      thumbnail: data?.respon?.thumbnail
-    }
-  },
-
-  // 15
-  async (url) => {
-    const { data } = await axios.get(
-      `https://www.getfvid.com/downloader?url=${encodeURIComponent(url)}`
-    )
-
-    return {
-      url: data?.download,
-      title: 'Social Media Video',
-      thumbnail: null
-    }
-  }
-
-]
+// CLEAN SILENT API MODE
+// NO "TRYING API 1/15" MESSAGES
+// ONLY REACT + DOWNLOAD
+// LOW RAM RENDER FREE TIER OPTIMIZED
 
 export default async function social(
   sock,
@@ -263,6 +24,12 @@ export default async function social(
     const url =
       query.match(/https?:\/\/[^\s]+/)?.[0] ||
       quotedText.match(/https?:\/\/[^\s]+/)?.[0]
+
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    NO URL
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    */
 
     if (!url) {
 
@@ -289,13 +56,16 @@ export default async function social(
 │ ${botSettings.prefix}fb link
 │
 │ Reply To Link Supported
-│
-│ Engine:
-│ 15 Backup APIs
 ╰⊷ *${botSettings.botname}*`
       }, { quoted: msg })
 
     }
+
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    LOADING REACT
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    */
 
     await sock.sendMessage(from, {
       react: {
@@ -306,40 +76,46 @@ export default async function social(
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    TRY APIS
+    SILENT API SEARCH
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
     */
 
     let media = null
 
-    for (let i = 0; i < APIS.length; i++) {
+    for (const api of APIS) {
 
       try {
 
-        await sock.sendMessage(from, {
-          text:
-`🔄 Trying API ${i + 1}/15`
-        }, { quoted: msg })
-
         const result =
-          await APIS[i](url)
+          await api(url)
 
-        if (!result?.url) continue
+        if (
+          result &&
+          result.url
+        ) {
 
-        media = result
+          media = result
 
-        break
+          break
+
+        }
 
       } catch (err) {
 
         console.log(
-          `API ${i + 1} FAILED`,
+          '[API FAILED]',
           err.message
         )
 
       }
 
     }
+
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    FAILED
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    */
 
     if (!media) {
 
@@ -352,7 +128,7 @@ export default async function social(
 
       return sock.sendMessage(from, {
         text:
-'> All download engines failed.'
+'> Failed to download media.'
       }, { quoted: msg })
 
     }
@@ -381,28 +157,29 @@ export default async function social(
 
     if (media.thumbnail) {
 
-      await sock.sendMessage(from, {
-        image: {
-          url: media.thumbnail
-        },
-        caption:
+      try {
+
+        await sock.sendMessage(from, {
+          image: {
+            url: media.thumbnail
+          },
+          caption:
 `╭─⌈ 📥 *Downloading Media* ⌋
 │ Title:
 │ ${media.title || 'Unknown'}
 │
-│ Engine:
-│ Ultra Backup Mode
-│
-│ APIs:
-│ 15 Online Scrapers
+│ Status:
+│ Downloading...
 ╰⊷ *${botSettings.botname}*`
-      }, { quoted: msg })
+        }, { quoted: msg })
+
+      } catch {}
 
     }
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    DOWNLOAD VIDEO
+    DOWNLOAD STREAM
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
     */
 
@@ -411,7 +188,11 @@ export default async function social(
         url: media.url,
         method: 'GET',
         responseType: 'stream',
-        timeout: 30000
+        timeout: 30000,
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0'
+        }
       })
 
     await pipelineAsync(
@@ -425,12 +206,13 @@ export default async function social(
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
     */
 
-    if (!fs.existsSync(filePath)) {
+    if (
+      !fs.existsSync(filePath)
+    ) {
 
-      return sock.sendMessage(from, {
-        text:
-'> Failed to save media.'
-      }, { quoted: msg })
+      throw new Error(
+        'File save failed'
+      )
 
     }
 
@@ -446,7 +228,7 @@ export default async function social(
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    SEND SUCCESS
+    SUCCESS REACT
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
     */
 
@@ -457,11 +239,18 @@ export default async function social(
       }
     })
 
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    SEND VIDEO
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    */
+
     await sock.sendMessage(from, {
       video: {
         url: filePath
       },
-      mimetype: 'video/mp4',
+      mimetype:
+        'video/mp4',
       fileName:
         `${safeTitle}.mp4`,
       caption:
@@ -472,7 +261,7 @@ export default async function social(
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    AUTO DELETE CACHE
+    CLEANUP
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
     */
 
@@ -489,12 +278,28 @@ export default async function social(
       err.message
     )
 
-    await sock.sendMessage(from, {
-      react: {
-        text: '❌',
-        key: msg.key
-      }
-    })
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    ERROR REACT
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    */
+
+    try {
+
+      await sock.sendMessage(from, {
+        react: {
+          text: '❌',
+          key: msg.key
+        }
+      })
+
+    } catch {}
+
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    ERROR MESSAGE
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    */
 
     await sock.sendMessage(from, {
       text:
@@ -503,7 +308,7 @@ export default async function social(
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    CLEANUP
+    AUTO CLEANUP
     ━━━━━━━━━━━━━━━━━━━━━━━━━━
     */
 
@@ -513,7 +318,9 @@ export default async function social(
         filePath &&
         fs.existsSync(filePath)
       ) {
+
         fs.unlinkSync(filePath)
+
       }
 
     } catch {}
