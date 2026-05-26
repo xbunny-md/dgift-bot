@@ -1,7 +1,9 @@
+// observers/superReveal.js
 import { downloadMediaMessage } from '@whiskeysockets/baileys'
 
 export default async function superReveal(sock, { msg, from, sender, reaction, isGroup }, botSettings) {
   try {
+    if (!botSettings) return
     if (!reaction?.text) return
 
     // Get the message that was reacted to
