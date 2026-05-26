@@ -21,7 +21,7 @@ export default async function executeAutonomousCommand(sock, { msg, from, pushNa
     const structuredUptimeString = `${calculationHours}h ${calculationMinutes}m ${calculationSeconds}s`
 
     const totalSystemMemoryBytes = os.totalmem()
-    const freeSystemMemoryBytes = os.freemem()
+    const freeSystemMemoryBytes = os.freem()
     const globalMemoryUtilizationRatio = (totalSystemMemoryBytes - freeSystemMemoryBytes) / totalSystemMemoryBytes
     const dynamicRamProgressBar = '█'.repeat(Math.round(globalMemoryUtilizationRatio * 10)) + '▒'.repeat(10 - Math.round(globalMemoryUtilizationRatio * 10))
     const totalRamUtilizationPercentage = Math.round(globalMemoryUtilizationRatio * 100)
@@ -64,9 +64,10 @@ export default async function executeAutonomousCommand(sock, { msg, from, pushNa
 
     primaryConstructedMenuBuffer += `${footerText}`
 
-    // Send with direct URL - no temp file needed
+    // Send with ENV image URL
+    const imageUrl = process.env.IMAGE_URL || 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
     await sock.sendMessage(from, {
-      image: { url: 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg' },
+      image: { url: imageUrl },
       caption: primaryConstructedMenuBuffer
     }, { quoted: msg })
 
