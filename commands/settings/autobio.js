@@ -1,50 +1,93 @@
-// observers/autobio.js
-export default async function autobio(sock, botSettings) {
+// commands/settings/autobio.js
+export const name = 'autobio'
+export const alias = ['autob', 'autobioupdate']
+export const category = 'Settings'
+export const desc = 'Toggle auto bio update on/off'
+
+export default async function autobio(sock, { msg, from, sender }, botSettings) {
   try {
     // Angalia kama database ipo
-    if (!botSettings?.supabase) return
+    if (!botSettings.supabase) {
+      return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
+    }
 
-    // Chukua setting ya autobio kutoka database
+    // Ruhusu owner pekee
+    const isOwner = sender === botSettings.owner_number + '@s.whatsapp.net'
+    if (!isOwner) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: '> Owner only command.' }, { quoted: msg })
+    }
+
+    const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
+    const args = body.trim().split(' ').slice(1)
+    const action = args[0]?.toLowerCase()
+
+    const targetJid = 'DGIFT_DEFAULT' // global setting tu
+
+    // Chukua status ya sasa
     const { data: settings } = await botSettings.supabase
-     .from('b_settings')
-     .select('autobio')
-     .eq('id', 'DGIFT_DEFAULT')
-     .maybeSingle()
+.from('b_settings')
+.select('autobio')
+.eq('id', targetJid)
+.maybeSingle()
 
-    // Kama autobio haiko ON, toka
-    if (!settings?.autobio) return
+    const currentValue = settings?.autobio || false
 
-    // Bios za English 150+ characters - zinachaguliwa random
-    const bios = [
-      `Welcome to ${botSettings.botname || 'DGIFT-BOT'} the most advanced WhatsApp automation bot designed to enhance your messaging experience with powerful features including anti-delete protection, auto-reply systems, status automation, smart group moderation, and seamless command handling for personal and business use.`,
+    // Onyesha status kama hakuna action
+    if (!action) {
+      await sock.sendMessage(from, { react: { text: '📝', key: msg.key } })
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ 📝 *AutoBio Control* ⌋
+│ Status: ${currentValue? 'ON ✅' : 'OFF ❌'}
+│ Target: Global 🌍
+│
+│ Usage:
+│ ${botSettings.prefix}autobio on
+│ ${botSettings.prefix}autobio off
+│
+│ Note: Bot will update bio automatically with random 150+ char bios
+╰⊷ *${botSettings.botname}*`
+      }, { quoted: msg })
+    }
 
-      `${botSettings.botname || 'DGIFT-BOT'} is currently active and running on a high-performance Node.js backend with Supabase database integration. We provide 24/7 automation services including message recovery, auto presence management, auto-read, auto-view status, and intelligent tag control for all users worldwide.`,
+    const newValue = ['on', 'enable', '1'].includes(action)
 
-      `This is ${botSettings.botname || 'DGIFT-BOT'} powered by modern JavaScript and Baileys library to deliver lightning-fast WhatsApp automation. Our bot supports multi-device sessions, media handling, custom commands, auto greetings, and advanced privacy features while maintaining stability and minimal resource consumption.`,
+    // Angalia kama tayari iko hivyo
+    if (newValue === currentValue) {
+      await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
+      return await sock.sendMessage(from, { text: `> AutoBio is already ${action}` }, { quoted: msg })
+    }
 
-      `${botSettings.botname || 'DGIFT-BOT'} delivers premium WhatsApp automation with a focus on reliability, speed, and user privacy. Features include auto-like status, auto-view status, anti-tag protection, message recovery, and smart moderation tools designed to make group management effortless and efficient for everyone.`,
+    // Sasisha database
+    const { error } = await botSettings.supabase
+.from('b_settings')
+.upsert({
+        id: targetJid,
+        autobio: newValue,
+        updated_at: new Date().toISOString()
+   }, { onConflict: 'id' })
 
-      `Experience next-level WhatsApp automation with ${botSettings.botname || 'DGIFT-BOT'}. We offer complete control over your chats with features like auto-reply, auto-typing presence, anti-delete recovery, auto-read messages, and custom auto-bio updates. Built for performance, security, and ease of use across all devices.`,
+    if (error) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
+    }
 
-      `${botSettings.botname || 'DGIFT-BOT'} operates as your personal WhatsApp assistant with cutting-edge automation capabilities. From recovering deleted messages to managing large groups, we handle everything automatically while keeping your account safe and ensuring smooth performance without delays or interruptions.`,
+    // Sasisha live memory
+    botSettings.autobio = newValue
 
-      `Running on optimized cloud infrastructure, ${botSettings.botname || 'DGIFT-BOT'} provides instant responses and automation for thousands of users. Our system includes intelligent message filtering, auto status viewing, tag limits enforcement, and comprehensive logging to maintain transparency and control over all activities.`,
-
-      `${botSettings.botname || 'DGIFT-BOT'} is engineered for productivity and entertainment with a clean, lightweight codebase. We support auto-reply, auto-read, auto-typing, anti-spam protection, and custom commands. Everything is designed to work seamlessly without violating WhatsApp policies or compromising your privacy.`,
-
-      `Transform your WhatsApp experience with ${botSettings.botname || 'DGIFT-BOT'}. We automate repetitive tasks, manage group interactions, recover deleted content, and provide real-time status automation. Built with scalability in mind to handle both small personal chats and large community groups efficiently.`,
-
-      `${botSettings.botname || 'DGIFT-BOT'} combines speed, security, and simplicity in one powerful package. Our automation suite includes anti-delete, auto-like, auto-view, anti-tag, auto-greet, and auto-bio features. All systems are monitored 24/7 to ensure maximum uptime and reliable performance for every user.`
-    ]
-
-    // Chagua bio random
-    const randomBio = bios[Math.floor(Math.random() * bios.length)]
-
-    // Update bio
-    await sock.updateProfileStatus(randomBio)
-    console.log(`[AUTOBIO] Bio updated successfully: ${randomBio.length} characters`)
+    await sock.sendMessage(from, { react: { text: newValue? '✅' : '❌', key: msg.key } })
+    await sock.sendMessage(from, {
+      text: `╭─⌈ 📝 *Settings Updated* ⌋
+│ Target: Global 🌍
+│ AutoBio: ${newValue? 'ON ✅' : 'OFF ❌'}
+│
+│ ${newValue? 'Bot will update bio automatically with random bios.' : 'Auto bio update has been disabled.'}
+╰⊷ *${botSettings.botname}*`
+    }, { quoted: msg })
 
   } catch (err) {
-    console.log('[AUTOBIO ERROR]', err.message)
+    console.error(`[AUTOBIO CMD ERROR]`, err.message)
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+    await sock.sendMessage(from, { text: '> Failed. Check database.' }, { quoted: msg })
   }
 }
