@@ -1,7 +1,7 @@
-import { supabase } from '../lib/supabase.js'
-
+// observers/autoread.js
 export default async function autoread(sock, { msg, from, isGroup }, botSettings) {
   try {
+    if (!botSettings?.supabase) return
     if (msg.key.fromMe) return
     if (!msg.key.id) return
 
@@ -11,7 +11,7 @@ export default async function autoread(sock, { msg, from, isGroup }, botSettings
     let settings = botSettings
 
     if (!settings || settings.autoread === undefined) {
-      const { data: dbSettings } = await supabase
+      const { data: dbSettings } = await botSettings.supabase
         .from('b_settings')
         .select('autoread')
         .eq('id', targetJid)
@@ -21,7 +21,7 @@ export default async function autoread(sock, { msg, from, isGroup }, botSettings
 
       // Fallback to global if group not set
       if ((!settings || settings.autoread === undefined) && isGroup) {
-        const { data: globalSettings } = await supabase
+        const { data: globalSettings } = await botSettings.supabase
           .from('b_settings')
           .select('autoread')
           .eq('id', 'DGIFT_DEFAULT')
