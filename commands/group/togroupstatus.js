@@ -1,141 +1,907 @@
-// commands/groupstatus.js
-import { downloadMediaMessage } from '@whiskeysockets/baileys'
+// commands/group/togroupstatus.js
 
-export const name = 'groupstatus'
-export const alias = ['gstatus', 'gs', 'setgstatus']
+export const name = 'togroupstatus'
+
+export const alias = [
+  'togs',
+  'groupstatus',
+  'gstatus',
+  'statusgroup',
+  'poststatus'
+]
+
 export const category = 'Group'
-export const desc = 'Post a status to the group so the group gets a green ring'
 
-async function getBrandName(botSettings) {
-  if (!botSettings.supabase) return 'Bot'
-  const instanceId = botSettings.instance_id || 'DGIFT_DEFAULT'
-  const { data } = await botSettings.supabase
-.from('b_settings')
-.select('brand_name, botname')
-.eq('id', instanceId)
-.maybeSingle()
-  return data?.brand_name || data?.botname || 'Bot'
-}
+export const desc =
+  'Send text, image, video, audio, sticker or view once directly to Group Status with native WhatsApp buttons.'
 
-function getErrorMessage(err) {
-  const msg = err.message?.toLowerCase() || ''
+// ======================================================
+// SETTINGS
+// ======================================================
 
-  if (msg.includes('not-authorized') || msg.includes('forbidden')) {
-    return 'I need to be an admin to post group status. Make me admin first.'
-  }
-  if (msg.includes('not a group')) {
-    return 'This command only works in groups.'
-  }
-  if (msg.includes('rate-limit')) {
-    return 'Too many requests. Try again in a few minutes.'
-  }
-  if (msg.includes('too large')) {
-    return 'File is too large. Max 64MB for video, 16MB for image.'
+async function getSettings(botSettings) {
+
+  const defaults = {
+    brandName: 'Bot',
+    prefix: '.'
   }
 
-  return 'Failed to post group status. Reason: ' + err.message
-}
-
-export default async function groupstatus(sock, { msg, from, isGroup, args }, botSettings) {
   try {
-    if (!isGroup) {
-      return await sock.sendMessage(from, {
-        text: '> This command only works in groups.'
-      }, { quoted: msg })
+
+    if (!botSettings?.supabase) {
+      return defaults
     }
 
-    const brandName = await getBrandName(botSettings)
+    const instanceId =
+      botSettings.instance_id ||
+      'DGIFT_DEFAULT'
 
-    // Detect media or text
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
-    const mediaMessage = msg.message?.imageMessage || 
-                         msg.message?.videoMessage ||
-                         msg.message?.extendedTextMessage ||
-                         quoted?.imageMessage || 
-                         quoted?.videoMessage ||
-                         quoted?.extendedTextMessage
+    const { data } =
+      await botSettings.supabase
+        .from('b_settings')
+        .select(`
+          brand_name,
+          botname,
+          prefix
+        `)
+        .eq('id', instanceId)
+        .maybeSingle()
 
-    if (!mediaMessage && !args.length) {
-      return await sock.sendMessage(from, {
-        text: `╭─⌈ GROUP STATUS ⌋
-│ Usage:
-│ ${botSettings.prefix}groupstatus Hello Group!
-│ ${botSettings.prefix}groupstatus (reply to image/video/text)
+    return {
+      brandName:
+        data?.brand_name ||
+        data?.botname ||
+        'Bot',
+
+      prefix:
+        data?.prefix || '.'
+    }
+
+  } catch {
+
+    return defaults
+  }
+}
+
+// ======================================================
+// UTILITIES
+// ======================================================
+
+function sleep(ms) {
+
+  return new Promise(resolve =>
+    setTimeout(resolve, ms)
+  )
+}
+
+function randomDelay() {
+
+  return Math.floor(
+    Math.random() * 1200
+  ) + 300
+}
+
+function logSuccess(type) {
+
+  console.log(`
+===================================
+GROUP STATUS SENT SUCCESSFULLY
+===================================
+TYPE : ${type}
+TIME : ${new Date().toLocaleString()}
+===================================
+`)
+}
+
+// ======================================================
+// WHATSAPP NATIVE BUTTONS
+// ======================================================
+
+async function sendMenuButtons(
+  sock,
+  from,
+  msg,
+  prefix,
+  brandName
+) {
+
+  try {
+
+    // ======================================================
+    // REAL WHATSAPP BUTTONS
+    // ======================================================
+
+    await sock.sendMessage(
+      from,
+      {
+        text: `
+╭─⌈ ${brandName.toUpperCase()} ⌋
+│ Group Status Uploaded Successfully
 │
-│ This will post to group status and show green ring.
-╰⊷ *Powered By ${brandName}*`
-      }, { quoted: msg })
-    }
+│ Use buttons below
+│ to open bot menus instantly.
+╰⊷ Native WhatsApp Buttons
+`,
 
-    await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } })
+        footer: `Powered By ${brandName}`,
 
-    let content
-    let type
+        buttons: [
 
-    // Handle text status
-    if (args.length && !mediaMessage) {
-      content = { text: args.join(' ') }
-      type = 'text'
-    } 
-    // Handle media/text from quoted or current message
-    else {
-      const buffer = await downloadMediaMessage(
-        { message: mediaMessage.videoMessage ? { videoMessage: mediaMessage } : 
-                  mediaMessage.imageMessage ? { imageMessage: mediaMessage } : 
-                  { extendedTextMessage: mediaMessage } },
-        'buffer',
-        {},
-        { logger: console }
-      )
+          {
+            buttonId: `${prefix}menu`,
+            buttonText: {
+              displayText: '📜 MENU'
+            },
+            type: 1
+          },
 
-      if (!buffer && mediaMessage.imageMessage || mediaMessage.videoMessage) {
-        await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-        return await sock.sendMessage(from, {
-          text: '> Failed to download media.'
-        }, { quoted: msg })
+          {
+            buttonId: `${prefix}allmenu`,
+            buttonText: {
+              displayText: '⚡ ALL MENU'
+            },
+            type: 1
+          },
+
+          {
+            buttonId: `${prefix}groupmenu`,
+            buttonText: {
+              displayText: '👥 GROUP MENU'
+            },
+            type: 1
+          }
+
+        ],
+
+        headerType: 1,
+        viewOnce: true
+
+      },
+      {
+        quoted: msg
       }
+    )
 
-      if (mediaMessage.imageMessage) {
-        content = { 
-          image: buffer, 
-          caption: mediaMessage.caption || args.join(' ') 
-        }
-        type = 'image'
-      } else if (mediaMessage.videoMessage) {
-        content = { 
-          video: buffer, 
-          caption: mediaMessage.caption || args.join(' '),
-          gifPlayback: false
-        }
-        type = 'video'
-      } else if (mediaMessage.extendedTextMessage) {
-        content = { text: mediaMessage.extendedTextMessage.text }
-        type = 'text'
+    // ======================================================
+    // ADVANCED NATIVE FLOW BUTTONS
+    // ======================================================
+
+    await sock.sendMessage(
+      from,
+      {
+        text: `
+╭─⌈ ${brandName.toUpperCase()} PANEL ⌋
+│ Advanced Interactive Menu
+╰⊷ Click Any Button Below
+`,
+
+        footer: `Powered By ${brandName}`,
+
+        interactiveButtons: [
+
+          {
+            name: 'quick_reply',
+
+            buttonParamsJson:
+              JSON.stringify({
+                display_text:
+                  '📜 MAIN MENU',
+
+                id:
+                  `${prefix}menu`
+              })
+          },
+
+          {
+            name: 'quick_reply',
+
+            buttonParamsJson:
+              JSON.stringify({
+                display_text:
+                  '⚡ COMMANDS',
+
+                id:
+                  `${prefix}allmenu`
+              })
+          },
+
+          {
+            name: 'quick_reply',
+
+            buttonParamsJson:
+              JSON.stringify({
+                display_text:
+                  '👥 GROUP MENU',
+
+                id:
+                  `${prefix}groupmenu`
+              })
+          },
+
+          {
+            name: 'quick_reply',
+
+            buttonParamsJson:
+              JSON.stringify({
+                display_text:
+                  '🎵 MUSIC MENU',
+
+                id:
+                  `${prefix}musicmenu`
+              })
+          },
+
+          {
+            name: 'quick_reply',
+
+            buttonParamsJson:
+              JSON.stringify({
+                display_text:
+                  '🤖 AI MENU',
+
+                id:
+                  `${prefix}aimenu`
+              })
+          }
+
+        ]
+
+      },
+      {
+        quoted: msg
       }
-    }
+    )
 
-    // Post to group status
-    await sock.groupStatusPost(from, content)
+    // ======================================================
+    // TEMPLATE STYLE BUTTONS
+    // ======================================================
 
-    await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
+    await sock.sendMessage(
+      from,
+      {
+        text: `
+╭─⌈ ${brandName.toUpperCase()} STATUS ⌋
+│ Upload Completed Successfully
+╰⊷ Fast Access Menu
+`,
 
-    await sock.sendMessage(from, {
-      text: `╭─⌈ GROUP STATUS POSTED ⌋
-│ Type: ${type}
-│ Status posted successfully.
-│ Group now has green ring 💚
-╰⊷ *Powered By ${brandName}*`
-    }, { quoted: msg })
+        footer:
+          `Powered By ${brandName}`,
+
+        templateButtons: [
+
+          {
+            index: 1,
+
+            quickReplyButton: {
+              displayText:
+                '📜 MENU',
+
+              id:
+                `${prefix}menu`
+            }
+          },
+
+          {
+            index: 2,
+
+            quickReplyButton: {
+              displayText:
+                '⚡ ALL MENU',
+
+              id:
+                `${prefix}allmenu`
+            }
+          },
+
+          {
+            index: 3,
+
+            quickReplyButton: {
+              displayText:
+                '👥 GROUP MENU',
+
+              id:
+                `${prefix}groupmenu`
+            }
+          }
+
+        ]
+
+      },
+      {
+        quoted: msg
+      }
+    )
 
   } catch (err) {
-    console.error('[GROUPSTATUS ERROR]', err)
-    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-    
-    const errorMsg = getErrorMessage(err)
-    await sock.sendMessage(from, {
-      text: `╭─⌈ GROUP STATUS FAILED ⌋
-│ ${errorMsg}
-╰⊷ *Powered By ${brandName}*`
-    }, { quoted: msg })
+
+    console.log(
+      '[BUTTON ERROR]',
+      err?.message
+    )
+  }
+}
+
+// ======================================================
+// MAIN
+// ======================================================
+
+export default async function togroupstatus(
+  sock,
+  {
+    msg,
+    from,
+    sender,
+    isGroup,
+    quoted,
+    body
+  },
+  botSettings
+) {
+
+  try {
+
+    // ======================================================
+    // GROUP ONLY
+    // ======================================================
+
+    if (!isGroup) {
+
+      return await sock.sendMessage(
+        from,
+        {
+          text:
+            '> This command only works in groups.'
+        },
+        {
+          quoted: msg
+        }
+      )
+    }
+
+    // ======================================================
+    // SETTINGS
+    // ======================================================
+
+    const settings =
+      await getSettings(
+        botSettings
+      )
+
+    const brandName =
+      settings.brandName
+
+    const prefix =
+      settings.prefix
+
+    // ======================================================
+    // REQUIRE CONTENT
+    // ======================================================
+
+    const hasText =
+      body?.trim()
+        ?.split(' ')
+        ?.slice(1)
+        ?.join(' ')
+
+    const hasQuoted =
+      !!quoted
+
+    if (
+      !hasText &&
+      !hasQuoted
+    ) {
+
+      return await sock.sendMessage(
+        from,
+        {
+          text: `
+╭─⌈ GROUP STATUS ⌋
+│ Usage Examples:
+│
+│ ${prefix}togroupstatus Hello
+│ Reply image + ${prefix}togroupstatus
+│ Reply video + ${prefix}togroupstatus
+│ Reply audio + ${prefix}togroupstatus
+│ Reply sticker + ${prefix}togroupstatus
+│ Reply view once + ${prefix}togroupstatus
+│
+│ Supports:
+│ ✓ Text
+│ ✓ Image
+│ ✓ Video
+│ ✓ Audio
+│ ✓ Sticker
+│ ✓ GIF
+│ ✓ ViewOnce V1/V2
+│ ✓ Document
+│ ✓ Voice
+│ ✓ Poll
+│ ✓ Reaction
+│ ✓ Contact
+│ ✓ Location
+│ ✓ Song
+│
+│ Native WhatsApp
+│ Interactive Buttons Enabled.
+╰⊷ Powered By ${brandName}
+`
+        },
+        {
+          quoted: msg
+        }
+      )
+    }
+
+    // ======================================================
+    // STATUS JID
+    // ======================================================
+
+    const GROUP_STATUS_JID =
+      'status@broadcast'
+
+    // ======================================================
+    // TEXT STATUS
+    // ======================================================
+
+    if (
+      hasText &&
+      !quoted
+    ) {
+
+      const text =
+        body
+          .split(' ')
+          .slice(1)
+          .join(' ')
+
+      const methods = [
+
+        async () => {
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            {
+              text
+            }
+          )
+        },
+
+        async () => {
+
+          await sleep(
+            randomDelay()
+          )
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            {
+              text,
+              mentions: [sender]
+            }
+          )
+        },
+
+        async () => {
+
+          await sock.sendPresenceUpdate(
+            'composing',
+            from
+          )
+
+          await sleep(700)
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            {
+              text
+            }
+          )
+        }
+
+      ]
+
+      let sent = false
+
+      for (
+        const method
+        of methods
+      ) {
+
+        try {
+
+          await method()
+
+          sent = true
+          break
+
+        } catch {}
+      }
+
+      if (!sent) {
+
+        throw new Error(
+          'Failed to send text status.'
+        )
+      }
+
+      logSuccess('TEXT')
+
+      // ======================================================
+      // SUCCESS MESSAGE
+      // ======================================================
+
+      await sock.sendMessage(
+        from,
+        {
+          text: `
+╭─⌈ GROUP STATUS SENT ⌋
+│ Type: TEXT
+│ Upload Successful
+│
+│ Native Buttons Added Below.
+╰⊷ Powered By ${brandName}
+`
+        },
+        {
+          quoted: msg
+        }
+      )
+
+      // ======================================================
+      // SEND BUTTONS
+      // ======================================================
+
+      await sendMenuButtons(
+        sock,
+        from,
+        msg,
+        prefix,
+        brandName
+      )
+
+      return
+    }
+
+    // ======================================================
+    // QUOTED MESSAGE
+    // ======================================================
+
+    if (quoted) {
+
+      const q =
+        quoted.message || {}
+
+      const type =
+        Object.keys(q)[0]
+
+      // ======================================================
+      // 15 METHODS
+      // ======================================================
+
+      const methods = [
+
+        async () => {
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted,
+            {
+              statusJidList: [from]
+            }
+          )
+        },
+
+        async () => {
+
+          await sleep(
+            randomDelay()
+          )
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            {
+              forward: quoted
+            }
+          )
+        },
+
+        async () => {
+
+          await sock.sendPresenceUpdate(
+            'composing',
+            from
+          )
+
+          await sleep(800)
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted
+          )
+        },
+
+        async () => {
+
+          await sock.sendPresenceUpdate(
+            'available',
+            from
+          )
+
+          await sleep(500)
+
+          await sock.copyNForward(
+            GROUP_STATUS_JID,
+            quoted,
+            true
+          )
+        },
+
+        async () => {
+
+          await sock.readMessages([
+            quoted.key
+          ])
+
+          await sleep(400)
+
+          await sock.copyNForward(
+            GROUP_STATUS_JID,
+            quoted,
+            true
+          )
+        },
+
+        async () => {
+
+          await sleep(1200)
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted
+          )
+        },
+
+        async () => {
+
+          const cloned =
+            JSON.parse(
+              JSON.stringify(
+                quoted
+              )
+            )
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            cloned
+          )
+        },
+
+        async () => {
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            {
+              forward: quoted
+            },
+            {
+              statusJidList: [from]
+            }
+          )
+        },
+
+        async () => {
+
+          await sleep(1500)
+
+          await sock.copyNForward(
+            GROUP_STATUS_JID,
+            quoted,
+            false
+          )
+        },
+
+        async () => {
+
+          await sock.sendPresenceUpdate(
+            'paused',
+            from
+          )
+
+          await sleep(700)
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted
+          )
+        },
+
+        async () => {
+
+          await sleep(
+            Math.floor(
+              Math.random() * 2500
+            )
+          )
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted
+          )
+        },
+
+        async () => {
+
+          await sock.copyNForward(
+            GROUP_STATUS_JID,
+            quoted,
+            true,
+            {
+              readViewOnce: true
+            }
+          )
+        },
+
+        async () => {
+
+          await sleep(1800)
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted,
+            {
+              additionalAttributes: {
+                retry: true
+              }
+            }
+          )
+        },
+
+        async () => {
+
+          await sock.sendPresenceUpdate(
+            'recording',
+            from
+          )
+
+          await sleep(1000)
+
+          await sock.copyNForward(
+            GROUP_STATUS_JID,
+            quoted,
+            true
+          )
+        },
+
+        async () => {
+
+          await sock.sendMessage(
+            GROUP_STATUS_JID,
+            quoted,
+            {
+              force: true,
+              ephemeralExpiration: 0
+            }
+          )
+        }
+
+      ]
+
+      let success = false
+
+      for (
+        let i = 0;
+        i < methods.length;
+        i++
+      ) {
+
+        try {
+
+          await methods[i]()
+
+          success = true
+
+          console.log(
+            `[GROUP STATUS SUCCESS] METHOD ${
+              i + 1
+            }`
+          )
+
+          break
+
+        } catch (err) {
+
+          console.log(
+            `[GROUP STATUS FAIL] METHOD ${
+              i + 1
+            } ->`,
+            err?.message
+          )
+
+          await sleep(300)
+        }
+      }
+
+      if (!success) {
+
+        throw new Error(
+          'All 15 methods failed.'
+        )
+      }
+
+      logSuccess(type)
+
+      // ======================================================
+      // SUCCESS MESSAGE
+      // ======================================================
+
+      await sock.sendMessage(
+        from,
+        {
+          text: `
+╭─⌈ GROUP STATUS SENT ⌋
+│ Type: ${type}
+│ Successfully Uploaded
+│
+│ ✓ Text
+│ ✓ Image
+│ ✓ Video
+│ ✓ Audio
+│ ✓ Sticker
+│ ✓ GIF
+│ ✓ Voice
+│ ✓ ViewOnce 1
+│ ✓ ViewOnce 2
+│ ✓ Poll
+│ ✓ Document
+│ ✓ Contact
+│ ✓ Location
+│ ✓ Song
+│
+│ Interactive Buttons Added.
+╰⊷ Powered By ${brandName}
+`
+        },
+        {
+          quoted: msg
+        }
+      )
+
+      // ======================================================
+      // SEND BUTTONS
+      // ======================================================
+
+      await sendMenuButtons(
+        sock,
+        from,
+        msg,
+        prefix,
+        brandName
+      )
+
+      return
+    }
+
+  } catch (err) {
+
+    console.error(
+      '[TOGROUPSTATUS ERROR]',
+      err
+    )
+
+    await sock.sendMessage(
+      from,
+      {
+        text: `
+╭─⌈ GROUP STATUS FAILED ⌋
+│ ${err.message}
+╰⊷ Try again later.
+`
+      },
+      {
+        quoted: msg
+      }
+    )
   }
 }
