@@ -37,7 +37,7 @@ function getErrorMessage(err) {
   return 'Failed to demote users. Reason: ' + err.message
 }
 
-export default async function demoteall(sock, { msg, from, sender, isGroup, groupMetadata }, botSettings) {
+export default async function demoteall(sock, { msg, from, isGroup, groupMetadata }, botSettings) {
   try {
     if (!isGroup) {
       return await sock.sendMessage(from, {
@@ -46,22 +46,6 @@ export default async function demoteall(sock, { msg, from, sender, isGroup, grou
     }
 
     const brandName = await getBrandName(botSettings)
-
-    // Check if sender is admin
-    const senderData = groupMetadata.participants.find(p => p.id === sender)
-    if (!senderData?.admin) {
-      return await sock.sendMessage(from, {
-        text: '> Only group admins can use this command.'
-      }, { quoted: msg })
-    }
-
-    // Check if bot is admin
-    const botData = groupMetadata.participants.find(p => p.id === sock.user.id)
-    if (!botData?.admin) {
-      return await sock.sendMessage(from, {
-        text: '> I need to be an admin to demote members. Make me admin first.'
-      }, { quoted: msg })
-    }
 
     // Get all admins except bot and group owner
     const admins = groupMetadata.participants
