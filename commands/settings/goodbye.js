@@ -1,73 +1,125 @@
-// observers/goodbye.js
-async function getGroupSettings(botSettings, targetId) {
-  if (!botSettings?.supabase) return null
-
-  // Jaribu kupata settings za group/groupId
-  const { data: groupSettings } = await botSettings.supabase
-  .from('b_settings')
-  .select('*')
-  .eq('id', targetId)
-  .maybeSingle()
-
-  if (groupSettings?.goodbye_enabled) return groupSettings
-
-  // Kama hakuna, angalia global settings DGIFT_DEFAULT
-  const { data: globalSettings } = await botSettings.supabase
-  .from('b_settings')
-  .select('*')
-  .eq('id', 'DGIFT_DEFAULT')
-  .maybeSingle()
-
-  return globalSettings
-}
-
-async function getBrandName(botSettings) {
-  if (!botSettings?.supabase) return 'Bot'
-  const instanceId = botSettings.instance_id || 'DGIFT_DEFAULT'
-  const { data } = await botSettings.supabase
-  .from('b_settings')
-  .select('brand_name, botname')
-  .eq('id', instanceId)
-  .maybeSingle()
-  return data?.brand_name || data?.botname || 'Bot'
-}
-
 export const name = 'goodbye'
+export const alias = ['goodby', 'bye']
+export const category = 'Settings'
+export const desc = 'Toggle goodbye message on/off globally and set message'
 
-export default async function goodbye(sock, event, botSettings) {
+export default async function goodbye(sock, { msg, from, sender }, botSettings) {
   try {
-    const { id: groupId, participants, action } = event
-    if (action!== 'remove' && action!== 'leave') return
-    if (!botSettings.supabase) return
-
-    // 1. CHECK SETTINGS FROM b_settings - NO HARDCODE
-    const settings = await getGroupSettings(botSettings, groupId)
-    if (!settings?.goodbye_enabled) return
-
-    const template = settings.goodbye_msg || 'Kwaheri @user'
-    const groupMeta = await sock.groupMetadata(groupId).catch(() => null)
-    const groupName = groupMeta?.subject || 'this group'
-    const brandName = await getBrandName(botSettings)
-    const botName = settings.botname || brandName
-
-    for (const userId of participants) {
-      const message = template
-      .replace('@user', `@${userId.split('@')[0]}`)
-      .replace('{group}', groupName)
-      .replace('{bot}', botName)
-
-      // 2. BUILD GOODBYE MESSAGE WITH BOXES
-      let goodbyeText = `╭─⌈ 👋 *${brandName} Goodbye* ⌋\n`
-      goodbyeText += `│ Bot: ${botName}\n`
-      goodbyeText += `│ Group: ${groupName}\n`
-      goodbyeText += `╰⊷ ${message}`
-
-      await sock.sendMessage(groupId, {
-        text: goodbyeText,
-        mentions: [userId]
-      }).catch(() => {})
+    if (!botSettings.supabase) {
+      return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
     }
+
+    const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
+    const args = body.trim().split(' ').slice(1)
+    const subCmd = args[0]?.toLowerCase()
+
+    const targetJid = 'DGIFT_DEFAULT'
+
+    const { data: settings } = await botSettings.supabase
+  .from('b_settings')
+  .select('goodbye_enabled, goodbye_msg')
+  .eq('id', targetJid)
+  .maybeSingle()
+
+    const currentValue = settings?.goodbye_enabled || false
+    const currentMsg = settings?.goodbye_msg || 'Kwaheri @user'
+
+    // No subcommand = show status
+    if (!subCmd) {
+      await sock.sendMessage(from, { react: { text: '👋', key: msg.key } })
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ 👋 *Goodbye Control* ⌋
+│ Status: ${currentValue? 'ON ✅' : 'OFF ❌'}
+│ Target: Global
+│
+│ Current Message:
+│ ${currentMsg}
+│
+│ Usage:
+│ ${botSettings.prefix}goodbye on
+│ ${botSettings.prefix}goodbye off
+│ ${botSettings.prefix}goodbye set <message>
+│
+│ Variables: @user, {group}, {bot}
+│ Note: Sends goodbye message when someone leaves
+╰⊷ *${botSettings.botname}*`
+      }, { quoted: msg })
+    }
+
+    // Set message
+    if (subCmd === 'set') {
+      const newMsg = args.slice(1).join(' ')
+      if (!newMsg) {
+        return sock.sendMessage(from, {
+          text: `> Usage: ${botSettings.prefix}goodbye set Kwaheri @user from {group}`
+        }, { quoted: msg })
+      }
+
+      const { error } = await botSettings.supabase
+    .from('b_settings')
+    .upsert({
+          id: targetJid,
+          goodbye_msg: newMsg,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
+
+      if (error) {
+        await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+        return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
+      }
+
+      await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ 👋 *Goodbye Message Updated* ⌋
+│ New Message:
+│ ${newMsg}
+│
+│ Variables: @user, {group}, {bot}
+╰⊷ *${botSettings.botname}*`
+      }, { quoted: msg })
+    }
+
+    // On/Off toggle
+    const newValue = ['on', 'enable', '1'].includes(subCmd)
+    if (!['on', 'off', 'enable', 'disable', '1', '0'].includes(subCmd)) {
+      return sock.sendMessage(from, {
+        text: `> Invalid option. Use on/off/set`
+      }, { quoted: msg })
+    }
+
+    if (newValue === currentValue) {
+      await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
+      return await sock.sendMessage(from, { text: `> Goodbye is already ${subCmd}` }, { quoted: msg })
+    }
+
+    const { error } = await botSettings.supabase
+  .from('b_settings')
+  .upsert({
+        id: targetJid,
+        goodbye_enabled: newValue,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' })
+
+    if (error) {
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
+    }
+
+    botSettings.goodbye_enabled = newValue
+
+    await sock.sendMessage(from, { react: { text: newValue? '✅' : '❌', key: msg.key } })
+    await sock.sendMessage(from, {
+      text: `╭─⌈ 👋 *Settings Updated* ⌋
+│ Goodbye: ${newValue? 'ON ✅' : 'OFF ❌'}
+│ Target: Global
+│
+│ ${newValue? 'Goodbye messages will be sent when users leave.' : 'Goodbye messages are now disabled.'}
+╰⊷ *${botSettings.botname}*`
+    }, { quoted: msg })
+
   } catch (err) {
-    console.error('[GOODBYE OBSERVER ERROR]', err.message)
+    console.error(`[GOODBYE CMD ERROR]`, err.message)
+    await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+    await sock.sendMessage(from, { text: '> Failed. Check database.' }, { quoted: msg })
   }
 }
