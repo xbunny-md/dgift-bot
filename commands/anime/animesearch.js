@@ -1,7 +1,7 @@
 // commands/anime/anime.js
 import axios from 'axios'
 
-export const name = 'anime'
+export const name = 'animesearch'
 export const alias = ['animesearch', 'searchanime', 'anisearch']
 export const category = 'Anime'
 export const desc = 'Search and retrieve comprehensive anime dataset profiles with 15 API fallbacks'
