@@ -3,14 +3,10 @@ export const alias = ['modes', 'botmode']
 export const category = 'Settings'
 export const desc = 'Switch bot mode between owner, public, and private-public'
 
-export default async function mode(sock, { msg, from, isOwner, isVIP }, botSettings) {
+export default async function mode(sock, { msg, from }, botSettings) {
   try {
     if (!botSettings.supabase) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
-    }
-
-    if (!isOwner &&!isVIP) {
-      return sock.sendMessage(from, { text: '> Only owner and VIP can change bot mode.' }, { quoted: msg })
     }
 
     const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
@@ -68,6 +64,16 @@ export default async function mode(sock, { msg, from, isOwner, isVIP }, botSetti
       return await sock.sendMessage(from, {
         text: `> Invalid mode. Use: owner, public, or private`
       }, { quoted: msg })
+    }
+
+    // Skip update if same as current
+    if (
+      newOwnerMode === currentOwnerMode &&
+      newPublicMode === currentPublicMode &&
+      newPrivatePublicMode === currentPrivatePublicMode
+    ) {
+      await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
+      return await sock.sendMessage(from, { text: `> Mode is already ${modeName}` }, { quoted: msg })
     }
 
     const { error } = await botSettings.supabase
