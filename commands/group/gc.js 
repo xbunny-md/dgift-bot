@@ -1,0 +1,119 @@
+// commands/group/creategroup.js
+export const name = 'creategroup'
+export const alias = ['cg', 'creategc', 'makegroup']
+export const category = 'Group'
+export const desc = 'Create a new group with you and mentioned users'
+
+async function getBrandName(botSettings) {
+  if (!botSettings.supabase) return 'Bot'
+  const instanceId = botSettings.instance_id || 'DGIFT_DEFAULT'
+  const { data } = await botSettings.supabase
+ .from('b_settings')
+ .select('brand_name, botname')
+ .eq('id', instanceId)
+ .maybeSingle()
+  return data?.brand_name || data?.botname || 'Bot'
+}
+
+function normalizeNumber(number) {
+  if (!number) return null
+  let num = number.replace(/[^0-9]/g, '')
+  if (!num) return null
+  if (num.startsWith('0')) num = num.slice(1)
+  if (num.length >= 8 && num.length <= 15) {
+    return num + '@s.whatsapp.net'
+  }
+  return null
+}
+
+function getErrorMessage(err) {
+  const msg = err.message?.toLowerCase() || ''
+
+  if (msg.includes('not-authorized') || msg.includes('forbidden')) {
+    return 'I do not have permission to create groups.'
+  }
+  if (msg.includes('invalid')) {
+    return 'Invalid number format. Use full international format like 255712345678.'
+  }
+  if (msg.includes('rate-limit')) {
+    return 'Too many requests. Try again in a few minutes.'
+  }
+  if (msg.includes('timeout')) {
+    return 'WhatsApp is temporarily unavailable. Try again later.'
+  }
+  return 'Failed to create group. Reason: ' + err.message
+}
+
+export default async function creategroup(sock, { msg, from, sender, args }, botSettings) {
+  try {
+    const brandName = await getBrandName(botSettings)
+
+    if (!args[0]) {
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ CREATE GROUP ⌋
+│ Usage:
+│ ${botSettings.prefix}creategroup GroupName @user1 @user2
+│ ${botSettings.prefix}creategroup GroupName 255712345678
+│
+│ Create a new group and add members.
+╰⊷ *Powered By ${brandName}*`
+      }, { quoted: msg })
+    }
+
+    // First arg is group name, rest are members
+    const groupName = args[0]
+    const members = []
+
+    // Get mentioned users
+    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
+    members.push(...mentioned)
+
+    // Get numbers from args
+    for (let i = 1; i < args.length; i++) {
+      const jid = normalizeNumber(args[i])
+      if (jid &&!members.includes(jid)) members.push(jid)
+    }
+
+    // Add sender if not included
+    if (!members.includes(sender)) members.push(sender)
+
+    if (members.length < 2) {
+      return await sock.sendMessage(from, {
+        text: `╭─⌈ CREATE GROUP FAILED ⌋
+│ You need at least 1 other member to create a group.
+│ Mention users or add numbers.
+╰⊷ *Powered By ${brandName}*`
+      }, { quoted: msg })
+    }
+
+    try {
+      // Create group
+      const group = await sock.groupCreate(groupName, members)
+
+      await sock.sendMessage(from, {
+        text: `╭─⌈ GROUP CREATED ⌋
+│ Group: ${group.subject}
+│ ID: ${group.id}
+│ Members: ${members.length}
+│
+│ Group created successfully.
+╰⊷ *Powered By ${brandName}*`,
+        mentions: members
+      }, { quoted: msg })
+
+    } catch (err) {
+      const errorMsg = getErrorMessage(err)
+      await sock.sendMessage(from, {
+        text: `╭─⌈ CREATE GROUP FAILED ⌋
+│ ${errorMsg}
+╰⊷ *Powered By ${brandName}*`
+      }, { quoted: msg })
+    }
+
+  } catch (err) {
+    console.error('[CREATEGROUP ERROR]', err)
+    await sock.sendMessage(from, {
+      text: '> An unexpected error occurred. Check console for details.'
+    }, { quoted: msg })
+  }
+}
