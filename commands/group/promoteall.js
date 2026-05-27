@@ -34,7 +34,7 @@ function getErrorMessage(err) {
   return 'Failed to promote users. Reason: ' + err.message
 }
 
-export default async function promoteall(sock, { msg, from, sender, isGroup, groupMetadata }, botSettings) {
+export default async function promoteall(sock, { msg, from, isGroup, groupMetadata }, botSettings) {
   try {
     if (!isGroup) {
       return await sock.sendMessage(from, {
@@ -44,23 +44,7 @@ export default async function promoteall(sock, { msg, from, sender, isGroup, gro
 
     const brandName = await getBrandName(botSettings)
 
-    // Check if sender is admin
-    const senderData = groupMetadata.participants.find(p => p.id === sender)
-    if (!senderData?.admin) {
-      return await sock.sendMessage(from, {
-        text: '> Only group admins can use this command.'
-      }, { quoted: msg })
-    }
-
-    // Check if bot is admin
-    const botData = groupMetadata.participants.find(p => p.id === sock.user.id)
-    if (!botData?.admin) {
-      return await sock.sendMessage(from, {
-        text: '> I need to be an admin to promote members. Make me admin first.'
-      }, { quoted: msg })
-    }
-
-    // Get all non-admin members
+    // Get all non-admin members except bot
     const nonAdmins = groupMetadata.participants
       .filter(p => !p.admin && p.id !== sock.user.id)
       .map(p => p.id)
