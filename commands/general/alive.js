@@ -20,8 +20,10 @@ export default async function alive(sock, { msg, from }, botSettings) {
     const uptimeString = `${hours}h ${minutes}m ${seconds}s`
     const platformLayer = process.env.RENDER_SERVICE_NAME ? 'Render Cloud' : 'Node.js Engine'
 
-    // Image from ENV
-    const imageUrl = process.env.IMAGE_URL || 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
+    // Image priority: DB startup_image → ENV → backup
+    const imageUrl = botSettings?.startup_image 
+      || process.env.IMAGE_URL 
+      || 'https://i.ibb.co/dsp8vz8h/IMG-20260528-WA0041.jpg'
 
     const caption = `╭─⌈ ⚡ *${activeBotIdentityName.toUpperCase()} IS ALIVE* ⌋
 │
