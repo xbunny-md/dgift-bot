@@ -15,17 +15,17 @@ export default async function banCommand(sock, { msg, from }, botSettings) {
     const action = args[0]?.toLowerCase()
     const targetJid = 'DGIFT_DEFAULT'
 
-    // Chukua status ya sasa
+    // Get current status
     const { data: settings } = await botSettings.supabase
-  .from('b_settings')
-  .select('ban_enabled, ban_action')
-  .eq('id', targetJid)
-  .maybeSingle()
+ .from('b_settings')
+ .select('ban_enabled, ban_action')
+ .eq('id', targetJid)
+ .maybeSingle()
 
     const currentValue = settings?.ban_enabled || false
     const currentAction = settings?.ban_action || 'kick'
 
-    // Onyesha status kama hakuna action
+    // Show status if no action
     if (!action) {
       await sock.sendMessage(from, { react: { text: '⛔', key: msg.key } })
       return await sock.sendMessage(from, {
@@ -40,11 +40,12 @@ export default async function banCommand(sock, { msg, from }, botSettings) {
 │ ${botSettings.prefix}ban @user 5min reason
 │
 │ Duration format: 5s, 10min, 2h, 3d
+│ Supports: s, sec, minute, min, hour, h, day, d
 ╰⊷ *${botSettings.botname}*`
       }, { quoted: msg })
     }
 
-    // ON/OFF toggle logic kama antidelete
+    // ON/OFF toggle logic
     if (action === 'on' || action === 'off' || action === 'enable' || action === 'disable' || action === '1' || action === '0') {
       const newValue = ['on', 'enable', '1'].includes(action)
 
@@ -54,8 +55,8 @@ export default async function banCommand(sock, { msg, from }, botSettings) {
       }
 
       const { error } = await botSettings.supabase
-    .from('b_settings')
-    .upsert({
+   .from('b_settings')
+   .upsert({
           id: targetJid,
           ban_enabled: newValue,
           updated_at: new Date().toISOString()
@@ -98,14 +99,14 @@ export default async function banCommand(sock, { msg, from }, botSettings) {
 
     const durationMs = parseDuration(durationStr)
     if (!durationMs) {
-      return sock.sendMessage(from, { text: '> Invalid duration. Use 5min, 5000s, 78h, 2d' }, { quoted: msg })
+      return sock.sendMessage(from, { text: '> Invalid duration. Use: 5min, 30s, 1h, 2d' }, { quoted: msg })
     }
 
     const unbanAt = new Date(Date.now() + durationMs).toISOString()
 
     const { error } = await botSettings.supabase
-  .from('banned_users')
-  .upsert({
+ .from('banned_users')
+ .upsert({
         group_id: from,
         user_id: mentionedJid,
         reason: reason,
@@ -122,10 +123,10 @@ export default async function banCommand(sock, { msg, from }, botSettings) {
 
     setTimeout(async () => {
       await botSettings.supabase
-    .from('banned_users')
-    .delete()
-    .eq('group_id', from)
-    .eq('user_id', mentionedJid)
+   .from('banned_users')
+   .delete()
+   .eq('group_id', from)
+   .eq('user_id', mentionedJid)
     }, durationMs)
 
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
@@ -149,11 +150,19 @@ export default async function banCommand(sock, { msg, from }, botSettings) {
 }
 
 const parseDuration = (input) => {
-  const match = /^(\d+)(s|m|h|d)$/.exec(input.toLowerCase())
+  const match = /^(\d+)(s|sec|second|seconds|min|minute|minutes|m|h|hour|hours|d|day|days)$/.exec(input.toLowerCase())
   if (!match) return null
+
   const value = parseInt(match[1])
   const unit = match[2]
-  const multipliers = { s: 1, m: 60, h: 3600, d: 86400 }
+
+  const multipliers = {
+    s: 1, sec: 1, second: 1, seconds: 1,
+    m: 60, min: 60, minute: 60, minutes: 60,
+    h: 3600, hour: 3600, hours: 3600,
+    d: 86400, day: 86400, days: 86400
+  }
+
   return value * multipliers[unit] * 1000
 }
 
