@@ -7,7 +7,7 @@ export const desc = 'Change bot owner number and name'
 export default async function setowner(sock, { msg, from, sender }, botSettings) {
   try {
     // Angalia kama database ipo
-    if (!botSettings.supabase) {
+    if (!botSettings.supabase ||!botSettings.instance_id) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
     }
 
@@ -18,12 +18,14 @@ export default async function setowner(sock, { msg, from, sender }, botSettings)
     const newNumber = args[0]?.replace(/[^0-9]/g, '')
     const newName = args.slice(1).join(' ').trim()
 
-    // Chukua settings za sasa
+    const instanceId = botSettings.instance_id // KILA BOT NA DATA ZAKE - NO DEFAULT
+
+    // Chukua settings za instance hii - KAMA INDEX.JS
     const { data: settings } = await botSettings.supabase
-    .from('b_settings')
-    .select('owner_number, owner_name, botname')
-    .eq('id', 'DGIFT_DEFAULT')
-    .maybeSingle()
+   .from('b_settings')
+   .select('owner_number, owner_name, botname')
+   .eq('id', instanceId)
+   .maybeSingle()
 
     const currentNumber = settings?.owner_number || 'Not set'
     const currentName = settings?.owner_name || 'Not set'
@@ -33,31 +35,32 @@ export default async function setowner(sock, { msg, from, sender }, botSettings)
     if (!newNumber &&!newName) {
       await sock.sendMessage(from, { react: { text: '⚙️', key: msg.key } })
       return await sock.sendMessage(from, {
-        text: `╭─⌈ 👑 *Owner Settings* ⌋
-│ Current Number: ${currentNumber}
-│ Current Name: ${currentName}
+        text: `╭─⌈ 👑 *Owner Control* ⌋
 │ Bot: ${botname}
+│ Instance: ${instanceId}
+│ Number: ${currentNumber}
+│ Name: ${currentName}
 │
 │ Usage:
-│ ${botSettings.prefix || '.'}setowner 2557xxxxxxxx Arnold
-│ ${botSettings.prefix || '.'}setowner 2557xxxxxxxx
-│ ${botSettings.prefix || '.'}setowner Arnold
+│ ${botSettings.prefix}setowner 2557xxxxxxxx Arnold
+│ ${botSettings.prefix}setowner 2557xxxxxxxx
+│ ${botSettings.prefix}setowner Arnold
 ╰⊷ *${botname}*`
       }, { quoted: msg })
     }
 
     const updateData = {
+      id: instanceId,
       updated_at: new Date().toISOString()
     }
 
     if (newNumber) updateData.owner_number = newNumber
     if (newName) updateData.owner_name = newName
 
-    // Sasisha database
+    // Sasisha database kwa upsert - KAMA INDEX.JS
     const { error } = await botSettings.supabase
-    .from('b_settings')
-    .update(updateData)
-    .eq('id', 'DGIFT_DEFAULT')
+   .from('b_settings')
+   .upsert(updateData, { onConflict: 'id' })
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
@@ -70,19 +73,19 @@ export default async function setowner(sock, { msg, from, sender }, botSettings)
 
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
     await sock.sendMessage(from, {
-      text: `╭─⌈ ✅ *Owner Updated* ⌋
-│ Old Number: ${currentNumber}
-│ New Number: ${newNumber || currentNumber}
-│ Old Name: ${currentName}
-│ New Name: ${newName || currentName}
+      text: `╭─⌈ ✅ *Settings Updated* ⌋
+│ Bot: ${botname}
+│ Instance: ${instanceId}
+│ Number: ${currentNumber} → ${newNumber || currentNumber}
+│ Name: ${currentName} → ${newName || currentName}
 │ Status: Applied instantly
 │
 ╰⊷ *${botname}*`
     }, { quoted: msg })
 
   } catch (err) {
-    console.error(`[SETOWNER ERROR]`, err.message)
+    console.error(`[SETOWNER CMD ERROR]`, err.message)
     await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-    await sock.sendMessage(from, { text: '> Failed to update owner.' }, { quoted: msg })
+    await sock.sendMessage(from, { text: '> Failed. Check database.' }, { quoted: msg })
   }
 }
