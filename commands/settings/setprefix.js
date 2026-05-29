@@ -7,7 +7,7 @@ export const desc = 'Change bot prefix'
 export default async function setprefix(sock, { msg, from, sender }, botSettings) {
   try {
     // Angalia kama database ipo
-    if (!botSettings.supabase) {
+    if (!botSettings.supabase ||!botSettings.instance_id) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
     }
 
@@ -15,30 +15,33 @@ export default async function setprefix(sock, { msg, from, sender }, botSettings
     const args = body.trim().split(' ').slice(1)
     const newPrefix = args[0]?.trim()
 
-    // Chukua settings za sasa
+    const instanceId = botSettings.instance_id // KILA BOT NA DATA ZAKE - NO DEFAULT
+
+    // Chukua settings za instance hii - KAMA INDEX.JS
     const { data: settings } = await botSettings.supabase
-.from('b_settings')
-.select('prefix, botname, brand_name')
-.eq('id', 'DGIFT_DEFAULT')
-.maybeSingle()
+   .from('b_settings')
+   .select('prefix, botname')
+   .eq('id', instanceId)
+   .maybeSingle()
 
     const currentPrefix = settings?.prefix || '.'
     const botname = settings?.botname || 'Bot'
-    const brandName = settings?.brand_name || 'dgift-bot'
 
     // Onyesha status kama hakuna prefix mpya
     if (!newPrefix) {
       await sock.sendMessage(from, { react: { text: '⚙️', key: msg.key } })
       return await sock.sendMessage(from, {
-        text: `╭─⌈ ⚙️ *Prefix Settings* ⌋
-│ Current: ${currentPrefix}
+        text: `╭─⌈ ⚙️ *Prefix Control* ⌋
 │ Bot: ${botname}
-│ Brand: ${brandName}
+│ Instance: ${instanceId}
+│ Status: ${currentPrefix}
 │
 │ Usage:
 │ ${currentPrefix}setprefix!
 │ ${currentPrefix}setprefix #
 │ ${currentPrefix}setprefix /
+│
+│ Max 3 characters
 ╰⊷ *${botname}*`
       }, { quoted: msg })
     }
@@ -49,20 +52,20 @@ export default async function setprefix(sock, { msg, from, sender }, botSettings
       return await sock.sendMessage(from, { text: '> Prefix too long. Max 3 characters.' }, { quoted: msg })
     }
 
-    // Angalia kama prefix ni ile
+    // Angalia kama prefix ni ileile
     if (newPrefix === currentPrefix) {
       await sock.sendMessage(from, { react: { text: '⚠️', key: msg.key } })
       return await sock.sendMessage(from, { text: `> Prefix is already set to "${currentPrefix}"` }, { quoted: msg })
     }
 
-    // Sasisha database
+    // Sasisha database kwa upsert - KAMA INDEX.JS ensureBotRow
     const { error } = await botSettings.supabase
-.from('b_settings')
-.update({
+   .from('b_settings')
+   .upsert({
+        id: instanceId,
         prefix: newPrefix,
         updated_at: new Date().toISOString()
-      })
-.eq('id', 'DGIFT_DEFAULT')
+      }, { onConflict: 'id' })
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
@@ -74,9 +77,10 @@ export default async function setprefix(sock, { msg, from, sender }, botSettings
 
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
     await sock.sendMessage(from, {
-      text: `╭─⌈ ✅ *Prefix Updated* ⌋
-│ Old: ${currentPrefix}
-│ New: ${newPrefix}
+      text: `╭─⌈ ✅ *Settings Updated* ⌋
+│ Bot: ${botname}
+│ Instance: ${instanceId}
+│ Prefix: ${currentPrefix} → ${newPrefix}
 │ Status: Applied instantly
 │
 │ Try: ${newPrefix}menu
@@ -84,8 +88,8 @@ export default async function setprefix(sock, { msg, from, sender }, botSettings
     }, { quoted: msg })
 
   } catch (err) {
-    console.error(`[SETPREFIX ERROR]`, err.message)
+    console.error(`[SETPREFIX CMD ERROR]`, err.message)
     await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
-    await sock.sendMessage(from, { text: '> Failed to update prefix.' }, { quoted: msg })
+    await sock.sendMessage(from, { text: '> Failed. Check database.' }, { quoted: msg })
   }
 }
