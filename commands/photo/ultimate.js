@@ -34,7 +34,7 @@ export const alias = [
   // Surebets
   'surebets','surebet','arbitrage',
   // AI Song creation
-  'song','makesong','createsong','aisong','songgen',
+  'song2','makesong','createsong','aisong','songgen',
   // Date/Time/Countdown
   'date','time','datetime','countdown','daysleft','daysuntil',
   // Extra 35+
