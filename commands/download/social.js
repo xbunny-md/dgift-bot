@@ -1,330 +1,203 @@
-// CLEAN SILENT API MODE
-// NO "TRYING API 1/15" MESSAGES
-// ONLY REACT + DOWNLOAD
-// LOW RAM RENDER FREE TIER OPTIMIZED
+import fs from 'fs'
+import path from 'path'
+import axios from 'axios'
+import { pipeline } from 'stream'
+import { promisify } from 'util'
 
-export default async function social(
-  sock,
-  { msg, from, args, quoted },
-  botSettings
-) {
+const pipelineAsync = promisify(pipeline)
+const TMP_DIR = './tmp'
 
+if (!fs.existsSync(TMP_DIR)) {
+  fs.mkdirSync(TMP_DIR, { recursive: true })
+}
+
+async function getBrandName(botSettings) {
+  if (!botSettings?.supabase) return botSettings?.botname || 'Bot'
+  const instanceId = botSettings.instance_id || 'DGIFT_DEFAULT'
+  try {
+    const { data } = await botSettings.supabase
+     .from('b_settings')
+     .select('brand_name, botname')
+     .eq('id', instanceId)
+     .maybeSingle()
+    return data?.brand_name || data?.botname || 'Bot'
+  } catch {
+    return botSettings.botname || 'Bot'
+  }
+}
+
+const APIS = [
+  async (url) => {
+    if (!url.includes('tiktok.com')) return null
+    try {
+      const { data } = await axios.get(`https://api.tikwm.com/video/?url=${encodeURIComponent(url)}`, { timeout: 12000 })
+      if (data?.data?.play) {
+        return {
+          url: data.data.play,
+          title: data.data.title || 'TikTok Video',
+          thumbnail: data.data.cover
+        }
+      }
+    } catch {}
+    return null
+  },
+  async (url) => {
+    if (!url.includes('tiktok.com')) return null
+    try {
+      const { data } = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 12000 })
+      if (data?.data?.play) {
+        return {
+          url: data.data.play,
+          title: data.data.title || 'TikTok Video',
+          thumbnail: data.data.cover
+        }
+      }
+    } catch {}
+    return null
+  },
+  async (url) => {
+    if (!url.includes('instagram.com')) return null
+    try {
+      const { data } = await axios.get(`https://api.saveig.app/info?url=${encodeURIComponent(url)}`, { timeout: 12000 })
+      if (data?.data?.url) {
+        return {
+          url: data.data.url,
+          title: data.data.title || 'Instagram Video',
+          thumbnail: data.data.thumbnail
+        }
+      }
+    } catch {}
+    return null
+  },
+  async (url) => {
+    if (!url.includes('instagram.com')) return null
+    try {
+      const { data } = await axios.get(`https://api.instagramdownloader.app/download?url=${encodeURIComponent(url)}`, { timeout: 12000 })
+      if (data?.url) {
+        return {
+          url: data.url,
+          title: data.title || 'Instagram Video',
+          thumbnail: data.thumbnail
+        }
+      }
+    } catch {}
+    return null
+  },
+  async (url) => {
+    if (!url.includes('facebook.com')) return null
+    try {
+      const { data } = await axios.get(`https://api.fbdown.net/download?url=${encodeURIComponent(url)}`, { timeout: 12000 })
+      if (data?.download?.hd) {
+        return {
+          url: data.download.hd,
+          title: data.title || 'Facebook Video',
+          thumbnail: data.thumbnail
+        }
+      }
+    } catch {}
+    return null
+  },
+  async (url) => {
+    if (!url.includes('facebook.com')) return null
+    try {
+      const { data } = await axios.get(`https://api.fdownloader.app/download?url=${encodeURIComponent(url)}`, { timeout: 12000 })
+      if (data?.url) {
+        return {
+          url: data.url,
+          title: data.title || 'Facebook Video',
+          thumbnail: data.thumbnail
+        }
+      }
+    } catch {}
+    return null
+  }
+]
+
+export const name = 'social'
+export const alias = ['tt', 'ig', 'fb', 'dl', 'download']
+export const category = 'Downloader'
+export const desc = 'Download TikTok Instagram Facebook videos'
+
+export default async function executeAutonomousCommand(sock, { msg, from, args }, botSettings) {
   let filePath = null
+  const brandName = await getBrandName(botSettings)
+  const prefix = botSettings.prefix || '.'
 
   try {
-
-    const query =
-      args.join(' ').trim()
-
-    const quotedText =
-      quoted?.message?.conversation ||
-      quoted?.message?.extendedTextMessage?.text ||
-      ''
-
-    const url =
-      query.match(/https?:\/\/[^\s]+/)?.[0] ||
-      quotedText.match(/https?:\/\/[^\s]+/)?.[0]
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    NO URL
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
+    const query = args.join(' ').trim()
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+    const quotedText = quoted?.conversation || quoted?.extendedTextMessage?.text || ''
+    const url = query.match(/https?:\/\/[^\s]+/)?.[0] || quotedText.match(/https?:\/\/[^\s]+/)?.[0]
 
     if (!url) {
-
-      await sock.sendMessage(from, {
-        react: {
-          text: '📥',
-          key: msg.key
-        }
-      })
-
+      await sock.sendMessage(from, { react: { text: '📥', key: msg.key } })
       return sock.sendMessage(from, {
-        text:
-`╭─⌈ 📥 *Social Downloader* ⌋
-│ Status: Ready
-│
-│ Supports:
-│ • TikTok
-│ • Instagram
-│ • Facebook
-│
-│ Usage:
-│ ${botSettings.prefix}tt link
-│ ${botSettings.prefix}ig link
-│ ${botSettings.prefix}fb link
-│
-│ Reply To Link Supported
-╰⊷ *${botSettings.botname}*`
+        text: `╭─⌈ 📥 Social Downloader ⌋
+│ Supports: TikTok | Instagram | Facebook
+│ Usage: ${prefix}tt link
+│ ${prefix}ig link
+│ ${prefix}fb link
+│ Reply to link also works
+╰⊷ Powered by ${brandName}`
       }, { quoted: msg })
-
     }
 
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    LOADING REACT
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    await sock.sendMessage(from, {
-      react: {
-        text: '⏳',
-        key: msg.key
-      }
-    })
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    SILENT API SEARCH
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
+    await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } })
 
     let media = null
-
     for (const api of APIS) {
-
       try {
-
-        const result =
-          await api(url)
-
-        if (
-          result &&
-          result.url
-        ) {
-
+        const result = await api(url)
+        if (result?.url) {
           media = result
-
           break
-
         }
-
-      } catch (err) {
-
-        console.log(
-          '[API FAILED]',
-          err.message
-        )
-
-      }
-
+      } catch {}
     }
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    FAILED
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
 
     if (!media) {
-
-      await sock.sendMessage(from, {
-        react: {
-          text: '❌',
-          key: msg.key
-        }
-      })
-
-      return sock.sendMessage(from, {
-        text:
-'> Failed to download media.'
-      }, { quoted: msg })
-
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
+      return sock.sendMessage(from, { text: '> Failed to download media' }, { quoted: msg })
     }
 
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    FILE PATH
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
+    const safeTitle = (media.title || 'social_video').replace(/[\\/:*?"<>|]/g, '').slice(0, 50)
+    filePath = path.join(TMP_DIR, `${safeTitle}_${Date.now()}.mp4`)
 
-    const safeTitle =
-      (media.title || 'social_video')
-      .replace(/[\\/:*?"<>|]/g, '')
-      .slice(0, 50)
-
-    filePath = path.join(
-      TMP_DIR,
-      `${safeTitle}_${Date.now()}.mp4`
-    )
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    SEND THUMBNAIL FIRST
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    if (media.thumbnail) {
-
-      try {
-
-        await sock.sendMessage(from, {
-          image: {
-            url: media.thumbnail
-          },
-          caption:
-`╭─⌈ 📥 *Downloading Media* ⌋
-│ Title:
-│ ${media.title || 'Unknown'}
-│
-│ Status:
-│ Downloading...
-╰⊷ *${botSettings.botname}*`
-        }, { quoted: msg })
-
-      } catch {}
-
-    }
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    DOWNLOAD STREAM
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    const response =
-      await axios({
-        url: media.url,
-        method: 'GET',
-        responseType: 'stream',
-        timeout: 30000,
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0'
-        }
-      })
-
-    await pipelineAsync(
-      response.data,
-      fs.createWriteStream(filePath)
-    )
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    CHECK FILE
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    if (
-      !fs.existsSync(filePath)
-    ) {
-
-      throw new Error(
-        'File save failed'
-      )
-
-    }
-
-    const stats =
-      fs.statSync(filePath)
-
-    const sizeMB =
-      (
-        stats.size /
-        1024 /
-        1024
-      ).toFixed(2)
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    SUCCESS REACT
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    await sock.sendMessage(from, {
-      react: {
-        text: '✅',
-        key: msg.key
-      }
+    const response = await axios({
+      url: media.url,
+      method: 'GET',
+      responseType: 'stream',
+      timeout: 30000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     })
 
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    SEND VIDEO
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
+    await pipelineAsync(response.data, fs.createWriteStream(filePath))
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File save failed')
+    }
+
+    const stats = fs.statSync(filePath)
+    const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
+
+    await sock.sendMessage(from, { react: { text: '✅', key: msg.key } })
 
     await sock.sendMessage(from, {
-      video: {
-        url: filePath
-      },
-      mimetype:
-        'video/mp4',
-      fileName:
-        `${safeTitle}.mp4`,
-      caption:
-`📥 ${media.title || 'Social Media Video'}
-
-📦 ${sizeMB} MB`
+      video: { url: filePath },
+      mimetype: 'video/mp4',
+      fileName: `${safeTitle}.mp4`,
+      caption: `📥 ${media.title || 'Video'}\n📦 ${sizeMB} MB\nPowered by ${brandName}`
     }, { quoted: msg })
 
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    CLEANUP
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    try {
-
-      fs.unlinkSync(filePath)
-
-    } catch {}
+    try { fs.unlinkSync(filePath) } catch {}
 
   } catch (err) {
-
-    console.error(
-      '[SOCIAL ERROR]',
-      err.message
-    )
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    ERROR REACT
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
     try {
-
-      await sock.sendMessage(from, {
-        react: {
-          text: '❌',
-          key: msg.key
-        }
-      })
-
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
     } catch {}
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    ERROR MESSAGE
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    await sock.sendMessage(from, {
-      text:
-`> Failed: ${err.message}`
-    }, { quoted: msg })
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    AUTO CLEANUP
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    */
-
+    await sock.sendMessage(from, { text: '> Download failed' }, { quoted: msg })
     try {
-
-      if (
-        filePath &&
-        fs.existsSync(filePath)
-      ) {
-
-        fs.unlinkSync(filePath)
-
-      }
-
+      if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath)
     } catch {}
-
   }
-
 }
