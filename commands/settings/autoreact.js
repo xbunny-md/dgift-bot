@@ -21,7 +21,7 @@ export default async function autoreact(sock, { msg, from, sender }, botSettings
     const { data: settings } = await botSettings.supabase
 .from('b_settings')
 .select('autoreact')
-.eq('id', targetJid)
+.eq('id', instanceId)
 .maybeSingle()
 
     const currentValue = settings?.autoreact || false
