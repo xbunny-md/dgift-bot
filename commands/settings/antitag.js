@@ -19,7 +19,7 @@ export default async function antitag(sock, { msg, from, sender }, botSettings) 
     const { data: settings } = await botSettings.supabase
 .from('b_settings')
 .select('antitag')
-.eq('id', targetJid)
+.eq('id', instanceId)
 .maybeSingle()
 
     const currentValue = settings?.antitag || false
