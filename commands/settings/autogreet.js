@@ -15,7 +15,7 @@ export default async function autogreet(sock, { msg, from, sender }, botSettings
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
 
-    const targetJid = 'DGIFT_DEFAULT' // global setting
+    const targetJid = 'instanceId' // global setting
 
     // Get current status
     const { data: settings } = await botSettings.supabase
