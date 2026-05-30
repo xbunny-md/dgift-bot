@@ -4,7 +4,7 @@ export const alias = ['antimention', 'notag']
 export const category = 'Settings'
 export const desc = 'Toggle anti tag on/off'
 
-export default async function antitag(sock, { msg, from, sender }, botSettings) {
+export default async function antitag(sock, { msg, from, sender, instanceId }, botSettings) {
   try {
     if (!botSettings.supabase) {
       return sock.sendMessage(from, { text: '> Database connection not ready.' }, { quoted: msg })
@@ -14,13 +14,19 @@ export default async function antitag(sock, { msg, from, sender }, botSettings) 
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
 
-    const targetJid = 'DGIFT_DEFAULT'
+    // TUMIA INSTANCEID DIRECT - DGIFT_DEFAULT IMEONDOLEWA
+    const targetJid = instanceId
 
-    const { data: settings } = await botSettings.supabase
-.from('b_settings')
-.select('antitag')
-.eq('id', instanceId)
-.maybeSingle()
+    const { data: settings, error: fetchError } = await botSettings.supabase
+     .from('b_settings')
+     .select('antitag')
+     .eq('id', targetJid)
+     .maybeSingle()
+
+    if (fetchError) {
+      console.error('[ANTITAG FETCH ERROR]', fetchError)
+      return sock.sendMessage(from, { text: '> Database fetch error.' }, { quoted: msg })
+    }
 
     const currentValue = settings?.antitag || false
 
@@ -29,7 +35,7 @@ export default async function antitag(sock, { msg, from, sender }, botSettings) 
       return await sock.sendMessage(from, {
         text: `╭─⌈ 🚫 *AntiTag Control* ⌋
 │ Status: ${currentValue? 'ON ✅' : 'OFF ❌'}
-│ Target: Global 🌍
+│ Instance: ${targetJid}
 │ Limit: 10 tags per message
 │
 │ Usage:
@@ -49,8 +55,8 @@ export default async function antitag(sock, { msg, from, sender }, botSettings) 
     }
 
     const { error } = await botSettings.supabase
-.from('b_settings')
-.upsert({
+     .from('b_settings')
+     .upsert({
         id: targetJid,
         antitag: newValue,
         updated_at: new Date().toISOString()
@@ -66,7 +72,7 @@ export default async function antitag(sock, { msg, from, sender }, botSettings) 
     await sock.sendMessage(from, { react: { text: newValue? '✅' : '❌', key: msg.key } })
     await sock.sendMessage(from, {
       text: `╭─⌈ 🚫 *Settings Updated* ⌋
-│ Target: Global 🌍
+│ Instance: ${targetJid}
 │ AntiTag: ${newValue? 'ON ✅' : 'OFF ❌'}
 │ Limit: 10 tags per message
 │
