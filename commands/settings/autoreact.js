@@ -1,10 +1,7 @@
-// commands/settings/autoreact.js
-export const name = 'autoreact'
-export const alias = ['reacton', 'autorc']
 export const category = 'Settings'
 export const desc = 'Toggle auto reaction on/off'
 
-export default async function autoreact(sock, { msg, from, sender }, botSettings) {
+export default async function autoreact(sock, { msg, from, sender, instanceId }, botSettings) {
   try {
     // Angalia kama database ipo
     if (!botSettings.supabase) {
@@ -15,14 +12,20 @@ export default async function autoreact(sock, { msg, from, sender }, botSettings
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
 
-    const targetJid = 'DGIFT_DEFAULT' // global setting tu
+    // Tumia instanceId moja kwa moja - DGIFT_DEFAULT IMEONDOLEWA
+    const targetJid = instanceId
 
     // Chukua status ya sasa
-    const { data: settings } = await botSettings.supabase
-.from('b_settings')
-.select('autoreact')
-.eq('id', instanceId)
-.maybeSingle()
+    const { data: settings, error: fetchError } = await botSettings.supabase
+     .from('b_settings')
+     .select('autoreact')
+     .eq('id', targetJid)
+     .maybeSingle()
+
+    if (fetchError) {
+      console.error('[AUTOREACT FETCH ERROR]', fetchError)
+      return sock.sendMessage(from, { text: '> Database fetch error.' }, { quoted: msg })
+    }
 
     const currentValue = settings?.autoreact || false
 
@@ -32,7 +35,7 @@ export default async function autoreact(sock, { msg, from, sender }, botSettings
       return await sock.sendMessage(from, {
         text: `╭─⌈ 🔥 *AutoReact Control* ⌋
 │ Status: ${currentValue? 'ON ✅' : 'OFF ❌'}
-│ Target: Global
+│ Instance: ${targetJid}
 │
 │ Usage:
 │ ${botSettings.prefix}autoreact on
@@ -51,30 +54,30 @@ export default async function autoreact(sock, { msg, from, sender }, botSettings
       return await sock.sendMessage(from, { text: `> AutoReact is already ${action}` }, { quoted: msg })
     }
 
-    // Sasisha database
+    // Sasisha database kwa instanceId
     const { error } = await botSettings.supabase
-.from('b_settings')
-.upsert(
-    {
-        id: targetJid,
-        autoreact: newValue,
-        updated_at: new Date().toISOString()
-    },
-    { onConflict: 'id' }
-  )
+     .from('b_settings')
+     .upsert(
+        {
+          id: targetJid,
+          autoreact: newValue,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'id' }
+      )
 
     if (error) {
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } })
       return await sock.sendMessage(from, { text: `> Database error: ${error.message}` }, { quoted: msg })
     }
 
-    // Sasisha live memory
+    // Sasisha live memory kwa instance hii
     botSettings.autoreact = newValue
 
     await sock.sendMessage(from, { react: { text: newValue? '✅' : '❌', key: msg.key } })
     await sock.sendMessage(from, {
       text: `╭─⌈ 🔥 *Settings Updated* ⌋
-│ Target: Global 🌍
+│ Instance: ${targetJid}
 │ AutoReact: ${newValue? 'ON ✅' : 'OFF ❌'}
 │
 │ ${newValue? 'Bot will now react to messages automatically.' : 'Auto reaction has been disabled.'}
