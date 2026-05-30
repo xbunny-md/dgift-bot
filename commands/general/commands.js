@@ -1,7 +1,7 @@
 import { getAllCommands } from '../../lib/router.js'
 
-export const name = 'menu'
-export const alias = ['commands', 'menu2', 'help']
+export const name = 'menu2'
+export const alias = ['commands2', 'allmenu', 'menu2', 'help2']
 export const category = 'General'
 export const desc = 'Displays the complete system interface panel dynamically categorized with fake server statistics'
 
