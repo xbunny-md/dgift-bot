@@ -20,7 +20,7 @@ export default async function antibadword(sock, { msg, from, sender }, botSettin
     const { data: settings } = await botSettings.supabase
    .from('b_settings')
    .select('antibadword_enabled')
-   .eq('id', targetJid)
+   .eq('id', instanceId)
    .maybeSingle()
 
     const currentValue = settings?.antibadword_enabled || false
