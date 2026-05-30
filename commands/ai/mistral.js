@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-export const name = 'mistral'
+export const name = 'mistral2'
 export const alias = ['mistralai', 'mist']
 export const category = 'AI'
 export const desc = 'Chat with Mistral AI'
