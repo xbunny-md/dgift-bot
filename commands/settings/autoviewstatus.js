@@ -4,7 +4,7 @@ export const alias = ['autoview', 'viewstatus', 'autovs']
 export const category = 'Settings'
 export const desc = 'Toggle auto view status on/off'
 
-export default async function autoviewstatus(sock, { msg, from, sender }, botSettings) {
+export default async function autoviewstatus(sock, { msg, from, sender, instanceId }, botSettings) {
   try {
     // Angalia kama database ipo
     if (!botSettings.supabase) {
@@ -15,14 +15,20 @@ export default async function autoviewstatus(sock, { msg, from, sender }, botSet
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
 
-    const targetJid = 'instanceId' // global setting tu
+    // FIX: Tumia instanceId variable, siyo string 'instanceId'
+    const targetJid = instanceId
 
     // Chukua status ya sasa
-    const { data: settings } = await botSettings.supabase
- .from('b_settings')
- .select('autoviewstatus')
- .eq('id', targetJid)
- .maybeSingle()
+    const { data: settings, error: fetchError } = await botSettings.supabase
+    .from('b_settings')
+    .select('autoviewstatus')
+    .eq('id', targetJid)
+    .maybeSingle()
+
+    if (fetchError) {
+      console.error('[AUTOVIEW FETCH ERROR]', fetchError)
+      return sock.sendMessage(from, { text: '> Database fetch error.' }, { quoted: msg })
+    }
 
     const currentValue = settings?.autoviewstatus || false
 
@@ -32,7 +38,7 @@ export default async function autoviewstatus(sock, { msg, from, sender }, botSet
       return await sock.sendMessage(from, {
         text: `╭─⌈ 👁️ *AutoView Status Control* ⌋
 │ Status: ${currentValue? 'ON ✅' : 'OFF ❌'}
-│ Target: Global 🌍
+│ Instance: ${targetJid}
 │
 │ Usage:
 │ ${botSettings.prefix}autoviewstatus on
@@ -53,8 +59,8 @@ export default async function autoviewstatus(sock, { msg, from, sender }, botSet
 
     // Sasisha database
     const { error } = await botSettings.supabase
- .from('b_settings')
- .upsert({
+    .from('b_settings')
+    .upsert({
         id: targetJid,
         autoviewstatus: newValue,
         updated_at: new Date().toISOString()
@@ -71,7 +77,7 @@ export default async function autoviewstatus(sock, { msg, from, sender }, botSet
     await sock.sendMessage(from, { react: { text: newValue? '✅' : '❌', key: msg.key } })
     await sock.sendMessage(from, {
       text: `╭─⌈ 👁️ *Settings Updated* ⌋
-│ Target: Global 🌍
+│ Instance: ${targetJid}
 │ AutoViewStatus: ${newValue? 'ON ✅' : 'OFF ❌'}
 │
 │ ${newValue? 'Bot will now view all statuses automatically.' : 'Auto view status has been disabled.'}
