@@ -19,7 +19,7 @@ export default async function setbotname(sock, { msg, from, sender }, botSetting
     const { data: settings } = await botSettings.supabase
    .from('b_settings')
    .select('botname, brand_name, prefix')
-   .eq('id', 'DGIFT_DEFAULT')
+   .eq('id', 'instanceId')
    .maybeSingle()
 
     const currentName = settings?.botname || 'dgift-bot'
