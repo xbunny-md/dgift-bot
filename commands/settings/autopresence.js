@@ -15,7 +15,7 @@ export default async function autotyping(sock, { msg, from, sender }, botSetting
     const args = body.trim().split(' ').slice(1)
     const action = args[0]?.toLowerCase()
 
-    const targetJid = 'DGIFT_DEFAULT' // global setting tu
+    const targetJid = 'instanceId' // global setting tu
 
     // Chukua status ya sasa
     const { data: settings } = await botSettings.supabase
