@@ -19,7 +19,7 @@ export default async function anticall(sock, { msg, from, sender }, botSettings)
     const { data: settings } = await botSettings.supabase
    .from('b_settings')
    .select('anticall')
-   .eq('id', targetJid)
+   .eq('id', instanceId)
    .maybeSingle()
 
     const currentValue = settings?.anticall || false
