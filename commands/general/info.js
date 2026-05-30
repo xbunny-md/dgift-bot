@@ -15,7 +15,7 @@ export default async function info(sock, { msg, from }, botSettings) {
     const brandName = botSettings.brand_name || ownerName
     const prefix = botSettings.prefix || '.'
     const description = botSettings.description || 'WhatsApp Bot'
-    const menuImage = botSettings.menu_image || null
+    const menuImage = botSettings.startup_image || null
 
     const text = 
 `╭─⌈ ℹ️ *${botName.toUpperCase()} INFO* ⌋
