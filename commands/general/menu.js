@@ -9,12 +9,18 @@ export const desc = 'Interactive menu with categories and emojis'
 async function getBrandName(botSettings) {
   if (!botSettings?.supabase) return botSettings?.botname || 'Bot'
   const instanceId = botSettings.instance_id || botSettings.instanceId
-  const { data } = await botSettings.supabase
-   .from('b_settings')
-   .select('brand_name, botname')
-   .eq('id', instanceId)
-   .maybeSingle()
-  return data?.brand_name || data?.botname || 'Bot'
+  if (!instanceId) return botSettings?.botname || 'Bot'
+  try {
+    const { data } = await botSettings.supabase
+      .from('b_settings')
+      .select('brand_name, botname')
+      .eq('id', instanceId)
+      .maybeSingle()
+    return data?.brand_name || data?.botname || botSettings?.botname || 'Bot'
+  } catch (err) {
+    console.log('Brand name error:', err.message)
+    return botSettings?.botname || 'Bot'
+  }
 }
 
 function generateFakeStats() {
@@ -56,21 +62,28 @@ export default async function menu(sock, { msg, from, pushName, sender }, botSet
   try {
     await sock.sendMessage(from, { react: { text: '🌀', key: msg.key } })
 
-    const instanceId = botSettings.instance_id || botSettings.instanceId
+    const instanceId = botSettings?.instance_id || botSettings?.instanceId
 
-    // Soma menu_list kutoka Supabase
     let menuList = {}
-    if (botSettings?.supabase) {
-      const { data } = await botSettings.supabase
-       .from('b_settings')
-       .select('menu_list, menu_image_url, menu_footer')
-       .eq('id', instanceId)
-       .maybeSingle()
-      menuList = data?.menu_list || {}
+    let menuImageUrl = botSettings?.menu_image_url || botSettings?.startup_image
+    let menuFooter = botSettings?.menu_footer
+
+    if (botSettings?.supabase && instanceId) {
+      try {
+        const { data } = await botSettings.supabase
+          .from('b_settings')
+          .select('menu_list, menu_image_url, menu_footer')
+          .eq('id', instanceId)
+          .maybeSingle()
+        menuList = data?.menu_list || {}
+        menuImageUrl = data?.menu_image_url || menuImageUrl
+        menuFooter = data?.menu_footer || menuFooter
+      } catch (err) {
+        console.log('Menu DB error:', err.message)
+      }
     }
 
-    // Kama menu_list haina data, tumia getAllCommands() kama backup
-    if (Object.keys(menuList).length === 0) {
+    if (!menuList || Object.keys(menuList).length === 0) {
       const allCommands = getAllCommands()
       for (const cmd of allCommands) {
         const category = (cmd.category || 'Uncategorized').toUpperCase()
@@ -80,21 +93,22 @@ export default async function menu(sock, { msg, from, pushName, sender }, botSet
     }
 
     const { uptimeString, ramBar, ramPercent, platform } = generateFakeStats()
-    const userIdentity = pushName || sender.split('@')[0]
+    const userIdentity = pushName || sender?.split('@')[0] || 'User'
 
-    const prefix = botSettings.prefix || '!'
-    const botName = botSettings.botname || 'Bot'
-    const ownerName = botSettings.owner_name || 'Owner'
+    const prefix = botSettings?.prefix || '!'
+    const botName = botSettings?.botname || 'Bot'
+    const ownerName = botSettings?.owner_name || 'Owner'
     const brandName = await getBrandName(botSettings)
-    const footerText = botSettings.menu_footer || `Powered By ${brandName}`
+    const footerText = menuFooter || `Powered By ${brandName}`
 
     const sortedCats = Object.keys(menuList).sort()
-    
-    // Hifadhi kwa memory ili observer itumie
-    botSettings.lastMenuCategories = sortedCats
-    botSettings.lastMenuCommands = menuList
-    botSettings.lastMenuFrom = from
-    botSettings.lastMenuEmojis = {}
+
+    if (botSettings) {
+      botSettings.lastMenuCategories = sortedCats
+      botSettings.lastMenuCommands = menuList
+      botSettings.lastMenuFrom = from
+      botSettings.lastMenuEmojis = {}
+    }
 
     let menuText = `╭──⌈ ${botName} ⌋
 │ User: ${userIdentity}
@@ -107,18 +121,14 @@ export default async function menu(sock, { msg, from, pushName, sender }, botSet
 
     sortedCats.forEach((cat, index) => {
       const emoji = getCategoryEmoji(cat)
-      botSettings.lastMenuEmojis[cat] = emoji
-      const cmdCount = menuList[cat].length
+      if (botSettings?.lastMenuEmojis) botSettings.lastMenuEmojis[cat] = emoji
+      const cmdCount = menuList[cat]?.length || 0
       menuText += `${index + 1}. ${emoji} *${cat}* [${cmdCount} cmds]\n`
     })
 
     menuText += `\n────────────────\n*${footerText}*`
 
-    const imageUrl =
-      botSettings.menu_image_url ||
-      process.env.IMAGE_URL ||
-      botSettings.startup_image ||
-      'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
+    const imageUrl = menuImageUrl || process.env.IMAGE_URL || 'https://i.ibb.co/1tM9QHF9/IMG-20260525-WA0076.jpg'
 
     await sock.sendMessage(from, {
       image: { url: imageUrl },
@@ -126,7 +136,9 @@ export default async function menu(sock, { msg, from, pushName, sender }, botSet
     }, { quoted: msg })
 
   } catch (e) {
-    console.error("Menu Error:", e.message)
-    await sock.sendMessage(from, { text: "Menu failed to load. Try again." }, { quoted: msg })
+    console.error('Menu Error:', e.message)
+    try {
+      await sock.sendMessage(from, { text: 'Menu failed to load. Try again.' }, { quoted: msg })
+    } catch (err) {}
   }
 }
